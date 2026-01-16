@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ABARG Chat</title>
+  <style>
+    :root {
+      --primary: #128C7E;
+      --primary-dark: #075E54;
+      --secondary: #25D366;
+      --bg: #ECE5DD;
+      --chat-bg: #FFF;
+      --text: #333;
+      --light-gray: #ddd;
+      --user-msg: #DCF8C6;
+      --other-msg: #FFFFFF;
+      --border: #ccc;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+    .hidden { display: none !important; }
+    button { cursor: pointer; }
+    input, button { padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid var(--border); }
+    button { background: var(--primary); color: white; border: none; font-weight: bold; }
+    .container { max-width: 800px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; height: 100%; }
+
+    /* Auth Screens */
+    .auth-screen { padding: 20px; text-align: center; }
+    .auth-screen h2 { margin: 10px 0; }
+    .auth-form input { width: 100%; }
+
+    /* Main App */
+    .app-header {
+      background: var(--primary);
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sidebar { width: 100%; background: white; overflow-y: auto; }
+    .chat-list { list-style: none; }
+    .chat-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--light-gray);
+      display: flex;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    .chat-item:hover { background: #f5f5f5; }
+    .main-chat { display: flex; flex-direction: column; height: 100%; background: var(--chat-bg); }
+    .chat-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--light-gray);
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .message {
+      max-width: 70%;
+      padding: 8px 12px;
+      margin: 4px 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .message.user { background: var(--user-msg); align-self: flex-end; }
+    .message.other { background: var(--other-msg); align-self: flex-start; border: 1px solid var(--light-gray); }
+    .message img { max-width: 200px; border-radius: 8px; }
+    .reactions {
+      font-size: 0.8em;
+      margin-top: 4px;
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .input-area {
+      display: flex;
+      padding: 10px;
+      background: white;
+      border-top: 1px solid var(--light-gray);
+    }
+    .input-area input {
+      flex: 1;
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 20px;
+      margin-right: 8px;
+    }
+
+    /* EMOJI PICKER */
+    #emojiPicker {
+      position: fixed;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      padding: 6px;
+      z-index: 100000;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+      display: none;
+      gap: 6px;
+      width: max-content;
+      grid-template-columns: repeat(5, 1fr);
+      pointer-events: auto;
+    }
+
+    .emoji {
+      font-size: 20px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .emoji:hover {
+      background: #f0f0f0;
+    }
+
+    .reaction {
+      background: #eee;
+      padding: 2px 6px;
+      border-radius: 10px;
+      cursor: default;
+      font-size: 0.9em;
+      margin-right: 4px;
+      transition: background 0.2s;
+    }
+
+    .reaction:hover {
+      background: #ddd;
+    }
+
+    /* Group Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+.dp {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 10px;
+}
+
+.chat-item {
+  align-items: center;
+}
+
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .member-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin: 10px 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .member-item {
+      padding: 5px;
+      cursor: pointer;
+    }
+
+    .member-item:hover {
+      background: #f0f0f0;
+    }
+
+    .selected {
+      background: var(--primary);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Auth Screens -->
+    <div id="authScreen" class="auth-screen">
+      <h2>ABARG Chat</h2>
+      <div id="registerForm">
+        <h3>Register</h3>
+        <input type="text" id="regUsername" placeholder="Username" />
+        <input type="email" id="regEmail" placeholder="Email" />
+        <input type="password" id="regPassword" placeholder="Password" />
+        <button onclick="register()">Register</button>
+        <p><a href="#" onclick="showLogin()">Already have an account?</a></p>
+      </div>
+      <div id="loginForm" class="hidden">
+        <h3>Login</h3>
+        <input type="email" id="loginEmail" placeholder="Email" />
+        <input type="password" id="loginPassword" placeholder="Password" />
+        <button onclick="login()">Login</button>
+        <p><a href="#" onclick="showRegister()">Need an account?</a></p>
+      </div>
+      <div id="otpForm" class="hidden">
+        <h3>Verify OTP</h3>
+        <p>Enter the 6-digit code sent to your email</p>
+        <input type="text" id="otpCode" placeholder="123456" maxlength="6" />
+        <button onclick="verifyOTP()">Verify</button>
+        <p><a href="#" onclick="showRegister()">Change email?</a></p>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="hidden">
+      <div class="app-header">
+        <span>ABARG</span>
+        <div>
+          <button onclick="showCreateGroup()" style="font-size:0.9em;padding:6px 10px;margin-right:5px;">+ Group</button>
+          <button onclick="logout()" style="font-size:0.9em;padding:6px 10px;">Logout</button>
+        </div>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden;">
+        <div id="sidebar" class="sidebar" style="width:40%;min-width:250px;">
+          <div style="padding:10px;"><button onclick="showAddFriend()">+ Add Friend</button></div>
+          <h4 style="padding:10px 16px;margin:0;">Chats</h4>
+          <ul id="chatList" class="chat-list"></ul>
+          <h4 style="padding:10px 16px;margin:0;">Groups</h4>
+          <ul id="groupList" class="chat-list"></ul>
+          <div id="incomingRequests"></div>
+        </div>
+        <div id="chatArea" class="main-chat hidden" style="width:60%;">
+          <div id="chatHeader" class="chat-header">
+              <input type="file" id="dpUpload" hidden onchange="uploadDP(this)">
+<button onclick="document.getElementById('dpUpload').click()">Change DP</button>
+
+ <div style="display:flex;align-items:center;gap:10px;">
+  <img id="chatDp" class="dp">
+  <span>Select a chat</span>
+</div>
+
+<div>
+  <button id="deleteChatBtn" class="hidden" onclick="deleteCurrentChat()">🗑</button>
+  <button id="deleteGroupBtn" class="hidden" onclick="deleteCurrentGroup()">🗑</button>
+  <button id="groupMembersBtn" class="hidden" onclick="showGroupMembers()">👥</button>
+</div>
+
+</div>
+
+          <div id="messages" class="messages"></div>
+          <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)" />
+            <button onclick="sendMessage()">Send</button>
+            <button onclick="document.getElementById('imageUpload').click()" style="margin-left:5px;">📷</button>
+            <input type="file" id="imageUpload" accept="image/*" onchange="uploadImage(this)" style="display:none;" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="addFriendModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Add Friend</h3>
+        <input type="text" id="friendUsername" placeholder="Enter username" style="width:100%;" />
+        <div style="margin-top:10px;">
+          <button onclick="sendFriendRequest()" style="width:48%;">Send</button>
+          <button onclick="hideAddFriend()" style="width:48%;background:#aaa;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="createGroupModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Create Group</h3>
+        <input type="text" id="groupName" placeholder="Group name" style="width:100%;" />
+        <div class="member-list" id="friendSelectionList"></div>
+        <div style="margin-top:10px;">
+          <button onclick="createGroup()" style="width:48%;">Create</button>
+          <button onclick="hideCreateGroup()" style="width:48%;background:#aaa;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="groupMembersModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Group Members</h3>
+        <div class="member-list" id="groupMembersList"></div>
+        <div style="margin-top:10px;">
+          <button onclick="hideGroupMembers()" style="width:100%;background:#aaa;">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="emojiPicker"></div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    // Config
+    const API_BASE = 'https://abarg.onrender.com';
+    let currentUser = null;
+    let currentChatId = null;
+    let currentChatType = null; // 'private' or 'group'
+    let socket = null;
+    const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🙏', '🔥', '💯'];
+
+    // DOM Elements
+    const authScreen = document.getElementById('authScreen');
+    const app = document.getElementById('app');
+    const registerForm = document.getElementById('registerForm');
+    const loginForm = document.getElementById('loginForm');
+    const otpForm = document.getElementById('otpForm');
+    const chatList = document.getElementById('chatList');
+    const groupList = document.getElementById('groupList');
+    const incomingRequests = document.getElementById('incomingRequests');
+    const chatArea = document.getElementById('chatArea');
+    const chatHeader = document.getElementById('chatHeader');
+    const messagesDiv = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const emojiPicker = document.getElementById('emojiPicker');
+    const groupMembersBtn = document.getElementById('groupMembersBtn');
+    const deleteChatBtn = document.getElementById('deleteChatBtn');
+    const deleteGroupBtn = document.getElementById('deleteGroupBtn');
+
+    // Selected friends for group creation
+    let selectedFriendIds = [];
+
+    // Auth UI Helpers
+    function showRegister() {
+      registerForm.classList.remove('hidden');
+      loginForm.classList.add('hidden');
+      otpForm.classList.add('hidden');
+    }
+    function showLogin() {
+      loginForm.classList.remove('hidden');
+      registerForm.classList.add('hidden');
+      otpForm.classList.add('hidden');
+    }
+    function showOTP() {
+      otpForm.classList.remove('hidden');
+      registerForm.classList.add('hidden');
+      loginForm.classList.add('hidden');
+    }
+function avatar(url, name="User") {
+  return url || `https://ui-avatars.com/api/?name=${name}&background=128C7E&color=fff`;
+}
+
+    async function api(url, options = {}) {
+      const token = localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+      if (token && !['/login', '/register', '/verify-otp'].includes(url)) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(API_BASE + url, { ...options, headers });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ msg: 'Server error' }));
+        throw new Error(err.msg || 'Request failed');
+      }
+      return res.json();
+    }
+async function deleteCurrentGroup() {
+  if (!currentChatId || currentChatType !== 'group') return;
+
+  if (!confirm("Delete this group permanently?")) return;
+
+  try {
+    await api(`/groups/${currentChatId}/delete`, { method: 'DELETE' });
+
+    chatArea.classList.add('hidden');
+    currentChatId = null;
+    currentChatType = null;
+
+    loadGroups();
+    chatHeader.querySelector('span').textContent = 'Select a chat';
+deleteGroupBtn.classList.add('hidden');
+groupMembersBtn.classList.add('hidden');
+
+    alert("Group deleted");
+
+  } catch (e) {
+    alert("Delete failed: " + e.message);
+  }
+}
+
+    // Auth Functions
+    async function register() {
+      const username = document.getElementById('regUsername').value;
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      try {
+        await api('/register', { method: 'POST', body: JSON.stringify({ username, email, password }) });
+        alert('Registration successful! Check your email for OTP.');
+        showOTP();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function verifyOTP() {
+      const email = document.getElementById('regEmail').value;
+      const otp = document.getElementById('otpCode').value;
+      try {
+        await api('/verify-otp', { method: 'POST', body: JSON.stringify({ email, otp }) });
+        alert('OTP verified! You can now log in.');
+        showLogin();
+      } catch (e) {
+        alert('Invalid OTP: ' + e.message);
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      try {
+        const data = await api('/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+        if (!data.access_token) {
+          alert('Server did not return a token.');
+          return;
+        }
+        localStorage.setItem('token', data.access_token);
+        initApp();
+      } catch (e) {
+        alert('Login failed: ' + e.message);
+      }
+    }
+
+    async function initApp() {
+      const token = localStorage.getItem('token');
+      if (!token || token === 'undefined' || token === 'null') {
+        localStorage.removeItem('token');
+        return showLogin();
+      }
+      try {
+        const profile = await api('/profile');
+        currentUser = profile;
+        authScreen.classList.add('hidden');
+        app.classList.remove('hidden');
+        connectSocket(token);
+        loadChats();
+        loadGroups();
+        loadIncomingRequests();
+      } catch (e) {
+        console.error("Profile error:", e.message);
+        localStorage.removeItem('token');
+        showLogin();
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      if (socket) socket.disconnect();
+      authScreen.classList.remove('hidden');
+      app.classList.add('hidden');
+      showLogin();
+    }
+
+    // Socket.IO
+    function connectSocket(token) {
+      socket = io(API_BASE, { query: { token }, transports: ['websocket'] });
+      socket.on('connect', () => console.log('Socket connected'));
+      socket.on('new_message', addMessageToUI);
+      socket.on('new_group_message', addMessageToUI);
+      socket.on('reaction_update', updateReactionInUI);
+      socket.on('error', (data) => alert('Socket error: ' + data.msg));
+    }
+
+    // Load Chats and Groups
+    async function loadChats() {
+      const friends = await api('/friends');
+      chatList.innerHTML = '';
+      friends.forEach(friend => {
+        const li = document.createElement('li');
+        li.className = 'chat-item';
+        li.innerHTML = `
+  <img src="${avatar(friend.profile_image, friend.username)}" class="dp">
+  <span>${friend.username}</span>
+`;
+
+        li.onclick = () => openPrivateChat(friend.id, friend.username, friend.profile_image);
+
+        chatList.appendChild(li);
+      });
+    }
+
+    async function loadGroups() {
+      try {
+        const groups = await api('/groups');
+        groupList.innerHTML = '';
+        groups.forEach(group => {
+          const li = document.createElement('li');
+          li.className = 'chat-item';
+          li.innerHTML = `<span>${group.name} (${group.member_count})</span>`;
+          li.onclick = () => openGroupChat(group.id, group.name);
+          groupList.appendChild(li);
+        });
+      } catch (e) {
+        console.error("Error loading groups:", e);
+      }
+    }
+
+    async function loadIncomingRequests() {
+      try {
+        const requests = await api('/friend-requests/incoming');
+        incomingRequests.innerHTML = '';
+        if (requests.length > 0) {
+          const h4 = document.createElement('h4');
+          h4.textContent = 'Friend Requests';
+          h4.style.padding = '10px 16px';
+          h4.style.margin = '0';
+          incomingRequests.appendChild(h4);
+          requests.forEach(req => {
+            const div = document.createElement('div');
+            div.style.padding = '8px';
+            div.innerHTML = `
+              ${req.username}
+              <button class="accept-btn" data-id="${req.request_id}" style="margin-left:5px;background:green;" onclick="acceptRequest(${req.request_id})">Accept</button>
+              <button class="reject-btn" data-id="${req.request_id}" style="margin-left:5px;background:red;" onclick="rejectRequest(${req.request_id})">Reject</button>
+            `;
+            incomingRequests.appendChild(div);
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function acceptRequest(requestId) {
+      await api(`/friend-requests/${requestId}/accept`, { method: 'POST' });
+      loadIncomingRequests();
+      loadChats();
+    }
+
+    async function rejectRequest(requestId) {
+      await api(`/friend-requests/${requestId}/reject`, { method: 'POST' });
+      loadIncomingRequests();
+    }
+
+    // Group Creation
+    function showCreateGroup() {
+      document.getElementById('createGroupModal').classList.remove('hidden');
+      loadFriendsForGroup();
+    }
+
+    function hideCreateGroup() {
+      document.getElementById('createGroupModal').classList.add('hidden');
+      selectedFriendIds = [];
+    }
+
+    async function loadFriendsForGroup() {
+      const friends = await api('/friends');
+      const list = document.getElementById('friendSelectionList');
+      list.innerHTML = '';
+      selectedFriendIds = [];
+
+      friends.forEach(friend => {
+        const div = document.createElement('div');
+        div.className = 'member-item';
+        div.textContent = friend.username;
+        div.dataset.userId = friend.id;
+        div.onclick = toggleFriendSelection;
+        list.appendChild(div);
+      });
+    }
+
+    function toggleFriendSelection(e) {
+      const userId = parseInt(e.target.dataset.userId);
+      const index = selectedFriendIds.indexOf(userId);
+
+      if (index === -1) {
+        selectedFriendIds.push(userId);
+        e.target.classList.add('selected');
+      } else {
+        selectedFriendIds.splice(index, 1);
+        e.target.classList.remove('selected');
+      }
+    }
+
+    async function createGroup() {
+      const groupName = document.getElementById('groupName').value;
+      if (!groupName) {
+        alert('Please enter a group name');
+        return;
+      }
+
+      try {
+        await api('/groups/create', {
+          method: 'POST',
+          body: JSON.stringify({
+            group_name: groupName,
+            member_ids: selectedFriendIds
+          })
+        });
+        alert('Group created successfully!');
+        hideCreateGroup();
+        loadGroups();
+      } catch (e) {
+        alert('Error creating group: ' + e.message);
+      }
+    }
+
+    // Chat Functions
+    async function openPrivateChat(friendId, friendName, friendDp) {
+
+  deleteChatBtn.classList.remove('hidden');
+  deleteGroupBtn.classList.add('hidden');
+
+  try {
+    const convData = await api(`/conversation-with/${friendId}`);
+    currentChatId = convData.conversation_id;
+    currentChatType = 'private';
+
+    chatHeader.querySelector('span').textContent = friendName;
+    document.getElementById('chatDp').src = avatar(friendDp, friendName);
+
+    groupMembersBtn.classList.add('hidden');
+    chatArea.classList.remove('hidden');
+    messagesDiv.innerHTML = '';
+
+    const history = await api(`/chat/history/${currentChatId}`);
+    messagesDiv.innerHTML = '';
+    history.forEach(addMessageToUI);
+
+    if (socket) {
+      socket.emit('join_private_chat', { conversation_id: currentChatId });
+    }
+  } catch (e) {
+    console.error("Error opening chat:", e);
+    alert("Could not open chat: " + e.message);
+  }
+}
+
+
+    async function openGroupChat(groupId, groupName) {
+deleteChatBtn.classList.add('hidden');
+deleteGroupBtn.classList.remove('hidden');
+
+      try {
+        currentChatId = groupId;
+        currentChatType = 'group';
+
+        chatHeader.querySelector('span').textContent = groupName;
+        document.getElementById('chatDp').src = avatar(null, groupName);
+
+        groupMembersBtn.classList.remove('hidden');
+        chatArea.classList.remove('hidden');
+        messagesDiv.innerHTML = '';
+
+        const history = await api(`/group-chat/history/${groupId}`);
+        messagesDiv.innerHTML = '';
+        history.forEach(addMessageToUI);
+
+        if (socket) {
+          socket.emit('join_group_chat', { group_id: groupId });
+        }
+      } catch (e) {
+        console.error("Error opening group chat:", e);
+        alert("Could not open group chat: " + e.message);
+      }
+    }
+
+    // Group Members
+    function showGroupMembers() {
+      if (currentChatType !== 'group') return;
+
+      document.getElementById('groupMembersModal').classList.remove('hidden');
+      loadGroupMembers();
+    }
+
+    function hideGroupMembers() {
+      document.getElementById('groupMembersModal').classList.add('hidden');
+    }
+
+    async function loadGroupMembers() {
+      try {
+        const members = await api(`/groups/${currentChatId}/members`);
+        const list = document.getElementById('groupMembersList');
+        list.innerHTML = '';
+
+        members.forEach(member => {
+          const div = document.createElement('div');
+          div.className = 'member-item';
+          div.textContent = member.username;
+          list.appendChild(div);
+        });
+      } catch (e) {
+        console.error("Error loading group members:", e);
+      }
+    }
+
+    // Friends
+    function showAddFriend() {
+      document.getElementById('addFriendModal').classList.remove('hidden');
+    }
+    function hideAddFriend() {
+      document.getElementById('addFriendModal').classList.add('hidden');
+    }
+    async function deleteCurrentChat() {
+  if (!currentChatId || currentChatType !== 'private') return;
+
+  if (!confirm("Delete this chat permanently?")) return;
+
+  try {
+    await api(`/chat/delete/${currentChatId}`, { method: 'DELETE' });
+
+    chatArea.classList.add('hidden');
+    currentChatId = null;
+    currentChatType = null;
+
+    loadChats();
+    alert("Chat deleted");
+
+  } catch (e) {
+    alert("Delete failed: " + e.message);
+  }
+}
+
+
+    async function sendFriendRequest() {
+      const username = document.getElementById('friendUsername').value;
+      try {
+        await api('/friend-requests/send', { method: 'POST', body: JSON.stringify({ username }) });
+        alert('Friend request sent!');
+        hideAddFriend();
+        loadChats();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    // Messaging
+    async function uploadImage(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('image', file);
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(API_BASE + '/upload-image', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
+        });
+        const data = await res.json();
+        if (socket && currentChatId) {
+          if (currentChatType === 'private') {
+            socket.emit('send_message', {
+              conversation_id: currentChatId,
+              image_url: data.url
+            });
+          } else {
+            socket.emit('send_message', {
+              group_id: currentChatId,
+              image_url: data.url
+            });
+          }
+        }
+      } catch (e) {
+        alert('Upload failed: ' + e.message);
+      }
+      input.value = '';
+    }
+
+    function sendMessage() {
+      const content = messageInput.value.trim();
+      if (!content || !socket || !currentChatId) return;
+
+      if (currentChatType === 'private') {
+        socket.emit('send_message', {
+          conversation_id: currentChatId,
+          content: content
+        });
+      } else {
+        socket.emit('send_message', {
+          group_id: currentChatId,
+          content: content
+        });
+      }
+
+      messageInput.value = '';
+    }
+
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') sendMessage();
+    }
+
+    // MESSAGE RENDERING WITH REACTIONS
+    function addMessageToUI(data) {
+      const div = document.createElement('div');
+      div.className = 'message';
+      div.dataset.messageId = data.id;
+
+      // Show sender name for group chats
+      let messageContent = data.content || '';
+      if (currentChatType === 'group' && data.sender_name && data.sender_id !== currentUser.id) {
+        messageContent = `${data.sender_name}: ${messageContent}`;
+      }
+
+      if (data.image_url) {
+        div.innerHTML = `<img src="${data.image_url}" />`;
+      } else {
+        div.textContent = messageContent || '';
+      }
+
+      const reactionsDiv = document.createElement('div');
+      reactionsDiv.className = 'reactions';
+      reactionsDiv.dataset.messageId = data.id;
+
+      if (data.reactions) {
+        for (const [emoji, count] of Object.entries(data.reactions)) {
+          const span = document.createElement('span');
+          span.className = 'reaction';
+          span.textContent = `${emoji} ${count}`;
+          reactionsDiv.appendChild(span);
+        }
+      }
+
+      div.appendChild(reactionsDiv);
+
+      if (currentUser && data.sender_id === currentUser.id) {
+        div.classList.add('user');
+      } else {
+        div.classList.add('other');
+      }
+
+      div.onclick = (e) => {
+        e.stopPropagation();
+        if (e.target.classList.contains('reaction')) return;
+        showEmojiPicker(data.id, div);
+      };
+
+      messagesDiv.appendChild(div);
+      scrollToBottom();
+    }
+async function uploadDP(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const form = new FormData();
+  form.append("image", file);
+
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(API_BASE + "/profile/upload-dp", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form
+  });
+
+  const data = await res.json();
+  currentUser.profile_image = data.url;
+
+  alert("Profile picture updated");
+
+  loadChats();
+}
+
+    function updateReactionInUI(data) {
+      const reactionsDiv = document.querySelector(`.reactions[data-message-id="${data.message_id}"]`);
+      if (!reactionsDiv) return;
+
+      reactionsDiv.innerHTML = '';
+      for (const [emoji, count] of Object.entries(data.reactions)) {
+        const span = document.createElement('span');
+        span.className = 'reaction';
+        span.textContent = `${emoji} ${count}`;
+        reactionsDiv.appendChild(span);
+      }
+    }
+
+    function showEmojiPicker(messageId, msgElement) {
+      const picker = document.getElementById('emojiPicker');
+      document.removeEventListener('click', hideEmojiPickerOnce);
+
+      picker.innerHTML = '';
+
+      EMOJIS.forEach(emoji => {
+        const span = document.createElement('span');
+        span.className = 'emoji';
+        span.textContent = emoji;
+
+        span.onclick = () => {
+          socket.emit('react', { message_id: messageId, emoji });
+          picker.style.display = 'none';
+        };
+
+        picker.appendChild(span);
+      });
+
+      const rect = msgElement.getBoundingClientRect();
+      picker.style.top = (rect.top - 60) + 'px';
+      picker.style.left = (rect.left + rect.width / 2 - 90) + 'px';
+      picker.style.display = 'grid';
+
+      setTimeout(() => {
+        document.addEventListener('click', hideEmojiPickerOnce);
+      }, 0);
+    }
+
+    function hideEmojiPickerOnce(e) {
+      const picker = document.getElementById('emojiPicker');
+      if (!picker.contains(e.target)) {
+        picker.style.display = 'none';
+        document.removeEventListener('click', hideEmojiPickerOnce);
+      }
+    }
+
+    function scrollToBottom() {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Start
+    if (localStorage.getItem('token')) {
+      initApp();
+    } else {
+      showRegister();
+    }
+  </script>
+</body>
+</html>
