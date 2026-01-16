@@ -17,18 +17,58 @@
       --other-msg: #FFFFFF;
       --border: #ccc;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
-    .hidden { display: none !important; }
-    button { cursor: pointer; }
-    input, button { padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid var(--border); }
-    button { background: var(--primary); color: white; border: none; font-weight: bold; }
-    .container { max-width: 800px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; height: 100%; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .hidden {
+      display: none !important;
+    }
+    button {
+      cursor: pointer;
+    }
+    input,
+    button {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      font-weight: bold;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
 
     /* Auth Screens */
-    .auth-screen { padding: 20px; text-align: center; }
-    .auth-screen h2 { margin: 10px 0; }
-    .auth-form input { width: 100%; }
+    .auth-screen {
+      padding: 20px;
+      text-align: center;
+    }
+    .auth-screen h2 {
+      margin: 10px 0;
+    }
+    .auth-form input {
+      width: 100%;
+    }
 
     /* Main App */
     .app-header {
@@ -39,17 +79,31 @@
       justify-content: space-between;
       align-items: center;
     }
-    .sidebar { width: 100%; background: white; overflow-y: auto; }
-    .chat-list { list-style: none; }
+    .sidebar {
+      width: 100%;
+      background: white;
+      overflow-y: auto;
+    }
+    .chat-list {
+      list-style: none;
+    }
     .chat-item {
       padding: 12px 16px;
       border-bottom: 1px solid var(--light-gray);
       display: flex;
       justify-content: space-between;
       cursor: pointer;
+      align-items: center;
     }
-    .chat-item:hover { background: #f5f5f5; }
-    .main-chat { display: flex; flex-direction: column; height: 100%; background: var(--chat-bg); }
+    .chat-item:hover {
+      background: #f5f5f5;
+    }
+    .main-chat {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--chat-bg);
+    }
     .chat-header {
       padding: 12px 16px;
       border-bottom: 1px solid var(--light-gray);
@@ -72,9 +126,19 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    .message.user { background: var(--user-msg); align-self: flex-end; }
-    .message.other { background: var(--other-msg); align-self: flex-start; border: 1px solid var(--light-gray); }
-    .message img { max-width: 200px; border-radius: 8px; }
+    .message.user {
+      background: var(--user-msg);
+      align-self: flex-end;
+    }
+    .message.other {
+      background: var(--other-msg);
+      align-self: flex-start;
+      border: 1px solid var(--light-gray);
+    }
+    .message img {
+      max-width: 200px;
+      border-radius: 8px;
+    }
     .reactions {
       font-size: 0.8em;
       margin-top: 4px;
@@ -104,7 +168,7 @@
       border-radius: 12px;
       padding: 6px;
       z-index: 100000;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
       display: none;
       gap: 6px;
       width: max-content;
@@ -141,30 +205,27 @@
       background: #ddd;
     }
 
-    /* Group Modal */
+    /* Modals */
     .modal {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0, 0, 0, 0.5);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
     }
-.dp {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-right: 10px;
-}
 
-.chat-item {
-  align-items: center;
-}
+    .dp {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-right: 10px;
+    }
 
     .modal-content {
       background: white;
@@ -238,7 +299,9 @@
       </div>
       <div style="display:flex;flex:1;overflow:hidden;">
         <div id="sidebar" class="sidebar" style="width:40%;min-width:250px;">
-          <div style="padding:10px;"><button onclick="showAddFriend()">+ Add Friend</button></div>
+          <div style="padding:10px;">
+            <button onclick="showAddFriend()">+ Add Friend</button>
+          </div>
           <h4 style="padding:10px 16px;margin:0;">Chats</h4>
           <ul id="chatList" class="chat-list"></ul>
           <h4 style="padding:10px 16px;margin:0;">Groups</h4>
@@ -247,22 +310,18 @@
         </div>
         <div id="chatArea" class="main-chat hidden" style="width:60%;">
           <div id="chatHeader" class="chat-header">
-              <input type="file" id="dpUpload" hidden onchange="uploadDP(this)">
-<button onclick="document.getElementById('dpUpload').click()">Change DP</button>
-
- <div style="display:flex;align-items:center;gap:10px;">
-  <img id="chatDp" class="dp">
-  <span>Select a chat</span>
-</div>
-
-<div>
-  <button id="deleteChatBtn" class="hidden" onclick="deleteCurrentChat()">🗑</button>
-  <button id="deleteGroupBtn" class="hidden" onclick="deleteCurrentGroup()">🗑</button>
-  <button id="groupMembersBtn" class="hidden" onclick="showGroupMembers()">👥</button>
-</div>
-
-</div>
-
+            <input type="file" id="dpUpload" hidden onchange="uploadDP(this)" />
+            <button onclick="document.getElementById('dpUpload').click()">Change DP</button>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <img id="chatDp" class="dp" />
+              <span>Select a chat</span>
+            </div>
+            <div>
+              <button id="deleteChatBtn" class="hidden" onclick="deleteCurrentChat()">🗑</button>
+              <button id="deleteGroupBtn" class="hidden" onclick="deleteCurrentGroup()">🗑</button>
+              <button id="groupMembersBtn" class="hidden" onclick="showGroupMembers()">👥</button>
+            </div>
+          </div>
           <div id="messages" class="messages"></div>
           <div class="input-area">
             <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)" />
@@ -358,9 +417,10 @@
       registerForm.classList.add('hidden');
       loginForm.classList.add('hidden');
     }
-function avatar(url, name="User") {
-  return url || `https://ui-avatars.com/api/?name=${name}&background=128C7E&color=fff`;
-}
+
+    function avatar(url, name = "User") {
+      return url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=128C7E&color=fff`;
+    }
 
     async function api(url, options = {}) {
       const token = localStorage.getItem('token');
@@ -375,29 +435,24 @@ function avatar(url, name="User") {
       }
       return res.json();
     }
-async function deleteCurrentGroup() {
-  if (!currentChatId || currentChatType !== 'group') return;
 
-  if (!confirm("Delete this group permanently?")) return;
-
-  try {
-    await api(`/groups/${currentChatId}/delete`, { method: 'DELETE' });
-
-    chatArea.classList.add('hidden');
-    currentChatId = null;
-    currentChatType = null;
-
-    loadGroups();
-    chatHeader.querySelector('span').textContent = 'Select a chat';
-deleteGroupBtn.classList.add('hidden');
-groupMembersBtn.classList.add('hidden');
-
-    alert("Group deleted");
-
-  } catch (e) {
-    alert("Delete failed: " + e.message);
-  }
-}
+    async function deleteCurrentGroup() {
+      if (!currentChatId || currentChatType !== 'group') return;
+      if (!confirm("Delete this group permanently?")) return;
+      try {
+        await api(`/groups/${currentChatId}/delete`, { method: 'DELETE' });
+        chatArea.classList.add('hidden');
+        currentChatId = null;
+        currentChatType = null;
+        loadGroups();
+        chatHeader.querySelector('span').textContent = 'Select a chat';
+        deleteGroupBtn.classList.add('hidden');
+        groupMembersBtn.classList.add('hidden');
+        alert("Group deleted");
+      } catch (e) {
+        alert("Delete failed: " + e.message);
+      }
+    }
 
     // Auth Functions
     async function register() {
@@ -489,12 +544,10 @@ groupMembersBtn.classList.add('hidden');
         const li = document.createElement('li');
         li.className = 'chat-item';
         li.innerHTML = `
-  <img src="${avatar(friend.profile_image, friend.username)}" class="dp">
-  <span>${friend.username}</span>
-`;
-
+          <img src="${avatar(friend.profile_image, friend.username)}" class="dp">
+          <span>${friend.username}</span>
+        `;
         li.onclick = () => openPrivateChat(friend.id, friend.username, friend.profile_image);
-
         chatList.appendChild(li);
       });
     }
@@ -568,7 +621,6 @@ groupMembersBtn.classList.add('hidden');
       const list = document.getElementById('friendSelectionList');
       list.innerHTML = '';
       selectedFriendIds = [];
-
       friends.forEach(friend => {
         const div = document.createElement('div');
         div.className = 'member-item';
@@ -582,7 +634,6 @@ groupMembersBtn.classList.add('hidden');
     function toggleFriendSelection(e) {
       const userId = parseInt(e.target.dataset.userId);
       const index = selectedFriendIds.indexOf(userId);
-
       if (index === -1) {
         selectedFriendIds.push(userId);
         e.target.classList.add('selected');
@@ -598,7 +649,6 @@ groupMembersBtn.classList.add('hidden');
         alert('Please enter a group name');
         return;
       }
-
       try {
         await api('/groups/create', {
           method: 'POST',
@@ -617,55 +667,43 @@ groupMembersBtn.classList.add('hidden');
 
     // Chat Functions
     async function openPrivateChat(friendId, friendName, friendDp) {
-
-  deleteChatBtn.classList.remove('hidden');
-  deleteGroupBtn.classList.add('hidden');
-
-  try {
-    const convData = await api(`/conversation-with/${friendId}`);
-    currentChatId = convData.conversation_id;
-    currentChatType = 'private';
-
-    chatHeader.querySelector('span').textContent = friendName;
-    document.getElementById('chatDp').src = avatar(friendDp, friendName);
-
-    groupMembersBtn.classList.add('hidden');
-    chatArea.classList.remove('hidden');
-    messagesDiv.innerHTML = '';
-
-    const history = await api(`/chat/history/${currentChatId}`);
-    messagesDiv.innerHTML = '';
-    history.forEach(addMessageToUI);
-
-    if (socket) {
-      socket.emit('join_private_chat', { conversation_id: currentChatId });
+      deleteChatBtn.classList.remove('hidden');
+      deleteGroupBtn.classList.add('hidden');
+      try {
+        const convData = await api(`/conversation-with/${friendId}`);
+        currentChatId = convData.conversation_id;
+        currentChatType = 'private';
+        chatHeader.querySelector('span').textContent = friendName;
+        document.getElementById('chatDp').src = avatar(friendDp, friendName);
+        groupMembersBtn.classList.add('hidden');
+        chatArea.classList.remove('hidden');
+        messagesDiv.innerHTML = '';
+        const history = await api(`/chat/history/${currentChatId}`);
+        messagesDiv.innerHTML = '';
+        history.forEach(addMessageToUI);
+        if (socket) {
+          socket.emit('join_private_chat', { conversation_id: currentChatId });
+        }
+      } catch (e) {
+        console.error("Error opening chat:", e);
+        alert("Could not open chat: " + e.message);
+      }
     }
-  } catch (e) {
-    console.error("Error opening chat:", e);
-    alert("Could not open chat: " + e.message);
-  }
-}
-
 
     async function openGroupChat(groupId, groupName) {
-deleteChatBtn.classList.add('hidden');
-deleteGroupBtn.classList.remove('hidden');
-
+      deleteChatBtn.classList.add('hidden');
+      deleteGroupBtn.classList.remove('hidden');
       try {
         currentChatId = groupId;
         currentChatType = 'group';
-
         chatHeader.querySelector('span').textContent = groupName;
         document.getElementById('chatDp').src = avatar(null, groupName);
-
         groupMembersBtn.classList.remove('hidden');
         chatArea.classList.remove('hidden');
         messagesDiv.innerHTML = '';
-
         const history = await api(`/group-chat/history/${groupId}`);
         messagesDiv.innerHTML = '';
         history.forEach(addMessageToUI);
-
         if (socket) {
           socket.emit('join_group_chat', { group_id: groupId });
         }
@@ -678,7 +716,6 @@ deleteGroupBtn.classList.remove('hidden');
     // Group Members
     function showGroupMembers() {
       if (currentChatType !== 'group') return;
-
       document.getElementById('groupMembersModal').classList.remove('hidden');
       loadGroupMembers();
     }
@@ -692,7 +729,6 @@ deleteGroupBtn.classList.remove('hidden');
         const members = await api(`/groups/${currentChatId}/members`);
         const list = document.getElementById('groupMembersList');
         list.innerHTML = '';
-
         members.forEach(member => {
           const div = document.createElement('div');
           div.className = 'member-item';
@@ -711,26 +747,21 @@ deleteGroupBtn.classList.remove('hidden');
     function hideAddFriend() {
       document.getElementById('addFriendModal').classList.add('hidden');
     }
+
     async function deleteCurrentChat() {
-  if (!currentChatId || currentChatType !== 'private') return;
-
-  if (!confirm("Delete this chat permanently?")) return;
-
-  try {
-    await api(`/chat/delete/${currentChatId}`, { method: 'DELETE' });
-
-    chatArea.classList.add('hidden');
-    currentChatId = null;
-    currentChatType = null;
-
-    loadChats();
-    alert("Chat deleted");
-
-  } catch (e) {
-    alert("Delete failed: " + e.message);
-  }
-}
-
+      if (!currentChatId || currentChatType !== 'private') return;
+      if (!confirm("Delete this chat permanently?")) return;
+      try {
+        await api(`/chat/delete/${currentChatId}`, { method: 'DELETE' });
+        chatArea.classList.add('hidden');
+        currentChatId = null;
+        currentChatType = null;
+        loadChats();
+        alert("Chat deleted");
+      } catch (e) {
+        alert("Delete failed: " + e.message);
+      }
+    }
 
     async function sendFriendRequest() {
       const username = document.getElementById('friendUsername').value;
@@ -780,7 +811,6 @@ deleteGroupBtn.classList.remove('hidden');
     function sendMessage() {
       const content = messageInput.value.trim();
       if (!content || !socket || !currentChatId) return;
-
       if (currentChatType === 'private') {
         socket.emit('send_message', {
           conversation_id: currentChatId,
@@ -792,7 +822,6 @@ deleteGroupBtn.classList.remove('hidden');
           content: content
         });
       }
-
       messageInput.value = '';
     }
 
@@ -806,7 +835,6 @@ deleteGroupBtn.classList.remove('hidden');
       div.className = 'message';
       div.dataset.messageId = data.id;
 
-      // Show sender name for group chats
       let messageContent = data.content || '';
       if (currentChatType === 'group' && data.sender_name && data.sender_id !== currentUser.id) {
         messageContent = `${data.sender_name}: ${messageContent}`;
@@ -848,33 +876,27 @@ deleteGroupBtn.classList.remove('hidden');
       messagesDiv.appendChild(div);
       scrollToBottom();
     }
-async function uploadDP(input) {
-  const file = input.files[0];
-  if (!file) return;
 
-  const form = new FormData();
-  form.append("image", file);
-
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(API_BASE + "/profile/upload-dp", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: form
-  });
-
-  const data = await res.json();
-  currentUser.profile_image = data.url;
-
-  alert("Profile picture updated");
-
-  loadChats();
-}
+    async function uploadDP(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const form = new FormData();
+      form.append("image", file);
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_BASE + "/profile/upload-dp", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form
+      });
+      const data = await res.json();
+      currentUser.profile_image = data.url;
+      alert("Profile picture updated");
+      loadChats();
+    }
 
     function updateReactionInUI(data) {
       const reactionsDiv = document.querySelector(`.reactions[data-message-id="${data.message_id}"]`);
       if (!reactionsDiv) return;
-
       reactionsDiv.innerHTML = '';
       for (const [emoji, count] of Object.entries(data.reactions)) {
         const span = document.createElement('span');
@@ -887,27 +909,21 @@ async function uploadDP(input) {
     function showEmojiPicker(messageId, msgElement) {
       const picker = document.getElementById('emojiPicker');
       document.removeEventListener('click', hideEmojiPickerOnce);
-
       picker.innerHTML = '';
-
       EMOJIS.forEach(emoji => {
         const span = document.createElement('span');
         span.className = 'emoji';
         span.textContent = emoji;
-
         span.onclick = () => {
           socket.emit('react', { message_id: messageId, emoji });
           picker.style.display = 'none';
         };
-
         picker.appendChild(span);
       });
-
       const rect = msgElement.getBoundingClientRect();
       picker.style.top = (rect.top - 60) + 'px';
       picker.style.left = (rect.left + rect.width / 2 - 90) + 'px';
       picker.style.display = 'grid';
-
       setTimeout(() => {
         document.addEventListener('click', hideEmojiPickerOnce);
       }, 0);

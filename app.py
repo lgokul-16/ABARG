@@ -1,32 +1,37 @@
+# app.py
 import os
-from flask import Flask, request, jsonify, send_from_directory, url_for
+from flask import Flask, request, jsonify, send_from_directory
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token
 from flask_mail import Mail, Message as MailMessage
-from flask_socketio import SocketIO, join_room, leave_room, emit
+from flask_socketio import SocketIO, join_room, emit
 from werkzeug.utils import secure_filename
-from PIL import Image
 from datetime import datetime
 import uuid
 from flask_cors import CORS
 from config import Config
-from models import db, User, EmailOTP, FriendRequest, Friend, Conversation, Participant, Message, Reaction, Group, \
-    GroupMember
+from models import db, User, EmailOTP, FriendRequest, Friend, Conversation, Participant, Message, Reaction, Group, GroupMember
 from supabase import create_client
-SUPABASE_URL = "https://qsvowzmqrxelfrkzvqnp.supabase.co"
-SUPABASE_KEY = "sb_publishable_LeWjFfX9IA44laDvDykgcA_LCCi-Fln"
 
+# Supabase setup
+SUPABASE_URL = "https://qsvowzmqrxelfrkzvqnp.supabase.co"
+SUPABASE_KEY = "sb_publishable_LeWjFfX9IA44laDvDykgcA_LCCi-Fln"  # ⚠️ Replace with service_role key in production
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='.')
     app.config.from_object(Config)
-    CORS(app, origins=["http://localhost:63342", "http://127.0.0.1:5000", "null"])
+    CORS(app, origins=["http://localhost:63342", "http://127.0.0.1:5000", "null", "https://*.railway.app"])
 
     db.init_app(app)
-    jwt = JWTManager(app)
+    JWTManager(app)
     mail = Mail(app)
     socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+
+    # Serve index.html at root
+    @app.route('/')
+    def index():
+        return send_from_directory('.', 'index.html')
 
     # -------------------------
     # Helper Functions
@@ -163,27 +168,20 @@ def create_app():
     @jwt_required()
     def get_conversation_with(friend_id):
         user_id = int(get_jwt_identity())
-
-        # Try to find existing conversation using Participant table
         conv = db.session.query(Conversation).join(Participant).filter(
             Participant.user_id.in_([user_id, friend_id])
         ).group_by(Conversation.id).having(db.func.count(Participant.id) == 2).first()
 
-        # If not found, create one
         if not conv:
             conv = Conversation()
             db.session.add(conv)
             db.session.flush()
-
             p1 = Participant(conversation_id=conv.id, user_id=user_id)
             p2 = Participant(conversation_id=conv.id, user_id=friend_id)
-
             db.session.add_all([p1, p2])
             db.session.commit()
 
-        return jsonify({
-            "conversation_id": conv.id
-        })
+        return jsonify({"conversation_id": conv.id})
 
     @app.route('/friend-requests/send', methods=['POST'])
     @jwt_required()
@@ -273,24 +271,15 @@ def create_app():
     @jwt_required()
     def delete_private_chat(conversation_id):
         user_id = int(get_jwt_identity())
-
         if not is_participant(conversation_id, user_id):
             return jsonify({"msg": "Unauthorized"}), 403
 
-        # Delete reactions
         msgs = Message.query.filter_by(conversation_id=conversation_id).all()
         for m in msgs:
             Reaction.query.filter_by(message_id=m.id).delete()
-
-        # Delete messages
         Message.query.filter_by(conversation_id=conversation_id).delete()
-
-        # Delete participants
         Participant.query.filter_by(conversation_id=conversation_id).delete()
-
-        # Delete conversation
         Conversation.query.filter_by(id=conversation_id).delete()
-
         db.session.commit()
         return jsonify({"msg": "Chat deleted"}), 200
 
@@ -323,27 +312,16 @@ def create_app():
     @jwt_required()
     def delete_group(group_id):
         user_id = int(get_jwt_identity())
-
         group = Group.query.get_or_404(group_id)
-
-        # Only creator can delete
         if group.created_by != user_id:
             return jsonify({"msg": "Only group creator can delete this group"}), 403
 
-        # Delete reactions
         msgs = Message.query.filter_by(group_id=group_id).all()
         for m in msgs:
             Reaction.query.filter_by(message_id=m.id).delete()
-
-        # Delete messages
         Message.query.filter_by(group_id=group_id).delete()
-
-        # Delete members
         GroupMember.query.filter_by(group_id=group_id).delete()
-
-        # Delete group
         Group.query.filter_by(id=group_id).delete()
-
         db.session.commit()
         return jsonify({"msg": "Group deleted"}), 200
 
@@ -352,27 +330,14 @@ def create_app():
     def upload_image():
         if 'image' not in request.files:
             return jsonify({"msg": "No image"}), 400
-
         file = request.files['image']
         ext = secure_filename(file.filename).split('.')[-1].lower()
-
         if ext not in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
             return jsonify({"msg": "Invalid image type"}), 400
-
         filename = f"{uuid.uuid4().hex}.{ext}"
-
-        # Upload to Supabase
         supabase.storage.from_("uploads").upload(filename, file.read())
-
         url = f"{SUPABASE_URL}/storage/v1/object/public/uploads/{filename}"
-
         return jsonify({"url": url}), 201
-
-
-
-    # -------------------------
-    # GROUP CHAT APIs
-    # -------------------------
 
     @app.route('/groups/create', methods=['POST'])
     @jwt_required()
@@ -381,27 +346,18 @@ def create_app():
         data = request.get_json()
         group_name = data.get('group_name')
         member_ids = data.get('member_ids', [])
-
         if not group_name:
             return jsonify({"msg": "Group name required"}), 400
-
-        # Create group
         group = Group(name=group_name, created_by=int(user_id))
         db.session.add(group)
         db.session.flush()
-
-        # Add creator as member
         creator_member = GroupMember(group_id=group.id, user_id=int(user_id))
         db.session.add(creator_member)
-
-        # Add other members
         for member_id in member_ids:
-            if member_id != int(user_id):  # Don't add creator twice
+            if member_id != int(user_id):
                 member = GroupMember(group_id=group.id, user_id=member_id)
                 db.session.add(member)
-
         db.session.commit()
-
         return jsonify({
             "msg": "Group created successfully",
             "group_id": group.id,
@@ -432,11 +388,9 @@ def create_app():
         user_id = get_jwt_identity()
         if not is_group_member(group_id, int(user_id)):
             return jsonify({"msg": "Unauthorized"}), 403
-
         members = db.session.query(User).join(GroupMember).filter(
             GroupMember.group_id == group_id
         ).all()
-
         result = []
         for member in members:
             result.append({
@@ -444,7 +398,6 @@ def create_app():
                 "username": member.username,
                 "profile_image": member.profile_image
             })
-
         return jsonify(result), 200
 
     @app.route('/groups/<int:group_id>/add-member', methods=['POST'])
@@ -453,34 +406,41 @@ def create_app():
         user_id = get_jwt_identity()
         if not is_group_member(group_id, int(user_id)):
             return jsonify({"msg": "Unauthorized"}), 403
-
         data = request.get_json()
         new_member_id = data.get('user_id')
-
         if not new_member_id:
             return jsonify({"msg": "User ID required"}), 400
-
-        # Check if user already in group
-        existing = GroupMember.query.filter_by(
-            group_id=group_id, user_id=new_member_id
-        ).first()
+        existing = GroupMember.query.filter_by(group_id=group_id, user_id=new_member_id).first()
         if existing:
             return jsonify({"msg": "User already in group"}), 400
-
-        # Add member
         new_member = GroupMember(group_id=group_id, user_id=new_member_id)
         db.session.add(new_member)
         db.session.commit()
-
-        # Notify group members via socket (optional)
         room = f'group_{group_id}'
         emit('group_member_added', {
             "group_id": group_id,
             "user_id": new_member_id,
             "username": User.query.get(new_member_id).username
         }, room=room)
-
         return jsonify({"msg": "Member added successfully"}), 200
+
+    @app.route('/profile/upload-dp', methods=['POST'])
+    @jwt_required()
+    def upload_profile_dp():
+        user_id = int(get_jwt_identity())
+        if 'image' not in request.files:
+            return jsonify({"msg": "No image"}), 400
+        file = request.files['image']
+        ext = secure_filename(file.filename).split('.')[-1].lower()
+        if ext not in ['png', 'jpg', 'jpeg', 'webp']:
+            return jsonify({"msg": "Invalid image type"}), 400
+        filename = f"profile_{user_id}_{uuid.uuid4().hex}.{ext}"
+        supabase.storage.from_("uploads").upload(filename, file.read())
+        url = f"{SUPABASE_URL}/storage/v1/object/public/uploads/{filename}"
+        user = User.query.get(user_id)
+        user.profile_image = url
+        db.session.commit()
+        return jsonify({"url": url}), 200
 
     # -------------------------
     # Socket.IO Events
@@ -519,12 +479,10 @@ def create_app():
         if not user_id:
             emit('error', {'msg': 'Authentication required'})
             return
-
         conversation_id = data['conversation_id']
         if not is_participant(conversation_id, user_id):
             emit('error', {'msg': 'Not authorized for this conversation'})
             return
-
         room = f'private_{conversation_id}'
         join_room(room)
         print(f"✅ User {user_id} joined room {room}")
@@ -536,42 +494,14 @@ def create_app():
         if not user_id:
             emit('error', {'msg': 'Authentication required'})
             return
-
         group_id = data['group_id']
         if not is_group_member(group_id, user_id):
             emit('error', {'msg': 'Not authorized for this group'})
             return
-
         room = f'group_{group_id}'
         join_room(room)
         print(f"✅ User {user_id} joined group room {room}")
         emit('joined_group', {'room': room})
-
-    @app.route('/profile/upload-dp', methods=['POST'])
-    @jwt_required()
-    def upload_profile_dp():
-        user_id = int(get_jwt_identity())
-
-        if 'image' not in request.files:
-            return jsonify({"msg": "No image"}), 400
-
-        file = request.files['image']
-        ext = secure_filename(file.filename).split('.')[-1].lower()
-
-        if ext not in ['png', 'jpg', 'jpeg', 'webp']:
-            return jsonify({"msg": "Invalid image type"}), 400
-
-        filename = f"profile_{user_id}_{uuid.uuid4().hex}.{ext}"
-
-        supabase.storage.from_("uploads").upload(filename, file.read())
-
-        url = f"{SUPABASE_URL}/storage/v1/object/public/uploads/{filename}"
-
-        user = User.query.get(user_id)
-        user.profile_image = url
-        db.session.commit()
-
-        return jsonify({"url": url}), 200
 
     @socketio.on('send_message')
     def handle_message(data):
@@ -579,30 +509,20 @@ def create_app():
         if not user_id:
             emit('error', {'msg': 'Authentication required'})
             return
-
         content = data.get('content', '')
         image_url = data.get('image_url')
         conversation_id = data.get('conversation_id')
         group_id = data.get('group_id')
-
         if not content and not image_url:
             emit('error', {'msg': 'Empty message'})
             return
-
         if conversation_id:
             if not is_participant(conversation_id, user_id):
                 emit('error', {'msg': 'Not authorized'})
                 return
-
-            msg = Message(
-                conversation_id=conversation_id,
-                sender_id=user_id,
-                content=content,
-                image_url=image_url
-            )
+            msg = Message(conversation_id=conversation_id, sender_id=user_id, content=content, image_url=image_url)
             db.session.add(msg)
             db.session.commit()
-
             room = f'private_{conversation_id}'
             emit('new_message', {
                 'id': msg.id,
@@ -613,21 +533,13 @@ def create_app():
                 'timestamp': msg.timestamp.isoformat(),
                 'reactions': {}
             }, room=room)
-
         elif group_id:
             if not is_group_member(group_id, user_id):
                 emit('error', {'msg': 'Not authorized'})
                 return
-
-            msg = Message(
-                group_id=group_id,
-                sender_id=user_id,
-                content=content,
-                image_url=image_url
-            )
+            msg = Message(group_id=group_id, sender_id=user_id, content=content, image_url=image_url)
             db.session.add(msg)
             db.session.commit()
-
             room = f'group_{group_id}'
             emit('new_group_message', {
                 'id': msg.id,
@@ -638,7 +550,6 @@ def create_app():
                 'timestamp': msg.timestamp.isoformat(),
                 'reactions': {}
             }, room=room)
-
         else:
             emit('error', {'msg': 'Invalid chat type'})
 
@@ -648,25 +559,18 @@ def create_app():
         if not user_id:
             emit('error', {'msg': 'Authentication required'})
             return
-
         message_id = data['message_id']
         emoji = data['emoji']
-
         msg = Message.query.get(message_id)
         if not msg:
             emit('error', {'msg': 'Message not found'})
             return
-
-        # Check authorization for private chat
         if msg.conversation_id and not is_participant(msg.conversation_id, user_id):
             emit('error', {'msg': 'Not authorized'})
             return
-
-        # Check authorization for group chat
         if msg.group_id and not is_group_member(msg.group_id, user_id):
             emit('error', {'msg': 'Not authorized'})
             return
-
         existing = Reaction.query.filter_by(message_id=message_id, user_id=user_id).first()
         if existing:
             existing.emoji = emoji
@@ -674,32 +578,23 @@ def create_app():
             new_reaction = Reaction(message_id=message_id, user_id=user_id, emoji=emoji)
             db.session.add(new_reaction)
         db.session.commit()
-
         reactions = Reaction.query.filter_by(message_id=message_id).all()
         reaction_counts = {}
         for r in reactions:
             reaction_counts[r.emoji] = reaction_counts.get(r.emoji, 0) + 1
-
-        # Broadcast to appropriate room
         if msg.conversation_id:
             room = f'private_{msg.conversation_id}'
-            emit('reaction_update', {
-                'message_id': message_id,
-                'reactions': reaction_counts
-            }, room=room)
+            emit('reaction_update', {'message_id': message_id, 'reactions': reaction_counts}, room=room)
         elif msg.group_id:
             room = f'group_{msg.group_id}'
-            emit('reaction_update', {
-                'message_id': message_id,
-                'reactions': reaction_counts
-            }, room=room)
+            emit('reaction_update', {'message_id': message_id, 'reactions': reaction_counts}, room=room)
 
-        app, socketio = create_app()
-
-        if __name__ == "__main__":
-            socketio.run(app, host="0.0.0.0", port=5000)
+    return app, socketio
 
 
+# ✅ CORRECT: Module-level app/socketio creation for Gunicorn
+app, socketio = create_app()
 
-
-
+# Optional: Keep this for local testing (won't run on Railway)
+if __name__ == "__main__":
+    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
