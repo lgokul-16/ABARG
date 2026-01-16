@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: ultimatum-backend
-    env: python
-    plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --worker-class eventlet -w 1
-    runtime: python
-    pythonVersion: 3.11.9
