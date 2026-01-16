@@ -26,7 +26,7 @@ def create_app():
     db.init_app(app)
     jwt = JWTManager(app)
     mail = Mail(app)
-    socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True)
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
     # -------------------------
     # Helper Functions
