@@ -1,6 +1,0 @@
-services:
-  - type: web
-    name: ultimatum
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --worker-class eventlet -w 1
