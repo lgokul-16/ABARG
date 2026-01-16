@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: abarg-backend
+    name: ultimatum
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --worker-class eventlet -w 1
