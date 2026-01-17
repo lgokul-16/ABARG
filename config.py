@@ -6,18 +6,24 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret')
+    # Use the variable from Railway
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Add these lines for Supabase stability
+    # Force SQLAlchemy to use a safer connection pool for cloud environments
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
-        "pool_recycle": 300,
+        "pool_recycle": 280,
+        "connect_args": {
+            "connect_timeout": 10,
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5
+        }
     }
 
-    # Mail & Supabase settings remain the same...
-
-    # Mail
+    # Mail & Supabase
     MAIL_SERVER = 'smtp.gmail.com'
     MAIL_PORT = 587
     MAIL_USE_TLS = True
@@ -25,10 +31,5 @@ class Config:
     MAIL_PASSWORD = os.environ.get('EMAIL_APP_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('EMAIL_USERNAME')
 
-    # Uploads
-    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', './uploads')
-    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
-
-    # Supabase
     SUPABASE_URL = os.environ.get('SUPABASE_URL')
     SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
