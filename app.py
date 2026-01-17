@@ -12,6 +12,8 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from supabase import create_client
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 
 load_dotenv()
 
@@ -24,9 +26,12 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # === Flask App ===
 app = Flask(__name__, static_folder='.')
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-dev-secret')
-app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///app.db"
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("postgresql://postgres:Vig1lanta134567854l@db.qsvowzmqrxelfrkzvqnp.supabase.co:5432/postgres")
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
+
 
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
