@@ -115,7 +115,8 @@ class Friend(db.Model):
 
 # === Extensions ===
 JWTManager(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+
 
 # === Helper Functions ===
 def send_otp_email(email, otp):
