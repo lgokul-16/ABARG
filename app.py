@@ -26,7 +26,8 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = Flask(__name__, static_folder='.')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-dev-secret')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
+app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///app.db"
+
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
