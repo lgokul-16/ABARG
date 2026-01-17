@@ -38,13 +38,9 @@ app.config['MAIL_USERNAME'] = os.getenv('EMAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('EMAIL_APP_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('EMAIL_USERNAME')
 
-CORS(app, origins=[
-    "http://localhost:63342",
-    "http://127.0.0.1:5000",
-    "http://localhost:5000",
-    "https://arabg.up.railway.app",
-    "null"
-])
+CORS(app, origins="*")
+
+
 
 # === Database ===
 db = SQLAlchemy(app)
