@@ -1,18 +1,16 @@
+import secrets
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 
-import secrets
-
+# Initialize db here, but don't bind to app yet
 db = SQLAlchemy()
-
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-
     is_verified = db.Column(db.Boolean, default=False)
     profile_image = db.Column(db.String(255), nullable=True)
 
@@ -21,7 +19,6 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
 
 class EmailOTP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -39,23 +36,12 @@ class EmailOTP(db.Model):
         db.session.commit()
         return otp
 
-    @staticmethod
-    def verify_otp(email, otp):
-        otp_record = EmailOTP.query.filter_by(email=email, otp=otp).first()
-        if otp_record and datetime.utcnow() < otp_record.expires_at:
-            db.session.delete(otp_record)
-            db.session.commit()
-            return True
-        return False
-
-
 class FriendRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     from_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     to_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 
 class Friend(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -63,17 +49,14 @@ class Friend(db.Model):
     friend_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-
 class Conversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 
 class Participant(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
 
 class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -81,13 +64,11 @@ class Group(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-
 class GroupMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -97,7 +78,6 @@ class Message(db.Model):
     content = db.Column(db.Text, nullable=True)
     image_url = db.Column(db.String(255), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
 
 class Reaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
