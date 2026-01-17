@@ -45,6 +45,9 @@ CORS(app, origins="*")
 # === Database ===
 db = SQLAlchemy(app)
 mail = Mail(app)  # ✅ Initialize Flask-Mail
+with app.app_context():
+    db.create_all()
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -640,6 +643,4 @@ def handle_reaction(data):
 
 # === Run ===
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
     socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
