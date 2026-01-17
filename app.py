@@ -19,9 +19,8 @@ load_dotenv()
 
 # === Supabase Setup ===
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
-if not SUPABASE_KEY:
-    SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # === Flask App ===
