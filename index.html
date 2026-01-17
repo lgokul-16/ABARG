@@ -374,7 +374,8 @@
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     // Config
-const API_BASE = 'abarg.up.railway.app';
+const API_BASE = 'https://abarg.up.railway.app';
+
 
     let currentUser = null;
     let currentChatId = null;
@@ -530,7 +531,8 @@ const API_BASE = 'abarg.up.railway.app';
 
     // Socket.IO
     function connectSocket(token) {
-      socket = io(API_BASE, { query: { token }, transports: ['websocket'] });
+      socket = io('https://abarg.up.railway.app', { query: { token }, transports: ['websocket'] });
+
       socket.on('connect', () => console.log('Socket connected'));
       socket.on('new_message', addMessageToUI);
       socket.on('new_group_message', addMessageToUI);
