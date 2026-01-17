@@ -9,16 +9,16 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # This configuration is required for Supabase Transaction Poolers
+    # Critical for Supabase stability on Railway
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": 280,
         "connect_args": {
-            "options": "-c statement_timeout=30000"
+            "connect_timeout": 10
         }
     }
 
-    # Mail Settings
+    # Mail & Supabase
     MAIL_SERVER = 'smtp.gmail.com'
     MAIL_PORT = 587
     MAIL_USE_TLS = True
@@ -26,7 +26,5 @@ class Config:
     MAIL_PASSWORD = os.environ.get('EMAIL_APP_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('EMAIL_USERNAME')
 
-    # Supabase Settings
     SUPABASE_URL = os.environ.get('SUPABASE_URL')
     SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
-    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', './uploads')
