@@ -370,10 +370,11 @@
 
   <div id="emojiPicker"></div>
 
+  <!-- Libraries -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     // Config
-    const API_BASE = 'https://arabg.up.railway.app';
+const API_BASE = 'http://127.0.0.1:5000';
     let currentUser = null;
     let currentChatId = null;
     let currentChatType = null; // 'private' or 'group'
@@ -836,7 +837,7 @@
       div.dataset.messageId = data.id;
 
       let messageContent = data.content || '';
-      if (currentChatType === 'group' && data.sender_name && data.sender_id !== currentUser.id) {
+      if (currentChatType === 'group' && data.sender_name && data.sender_id !== currentUser?.id) {
         messageContent = `${data.sender_name}: ${messageContent}`;
       }
 
@@ -850,7 +851,7 @@
       reactionsDiv.className = 'reactions';
       reactionsDiv.dataset.messageId = data.id;
 
-      if (data.reactions) {
+      if (data.reactions && typeof data.reactions === 'object') {
         for (const [emoji, count] of Object.entries(data.reactions)) {
           const span = document.createElement('span');
           span.className = 'reaction';
@@ -867,11 +868,12 @@
         div.classList.add('other');
       }
 
-      div.onclick = (e) => {
-        e.stopPropagation();
-        if (e.target.classList.contains('reaction')) return;
-        showEmojiPicker(data.id, div);
-      };
+ div.onclick = (e) => {
+  e.stopPropagation();   // <<< ADD THIS
+  if (e.target.closest('.reaction')) return;
+  showEmojiPicker(data.id, div);
+};
+
 
       messagesDiv.appendChild(div);
       scrollToBottom();
@@ -898,43 +900,57 @@
       const reactionsDiv = document.querySelector(`.reactions[data-message-id="${data.message_id}"]`);
       if (!reactionsDiv) return;
       reactionsDiv.innerHTML = '';
-      for (const [emoji, count] of Object.entries(data.reactions)) {
-        const span = document.createElement('span');
-        span.className = 'reaction';
-        span.textContent = `${emoji} ${count}`;
-        reactionsDiv.appendChild(span);
+      if (data.reactions && typeof data.reactions === 'object') {
+        for (const [emoji, count] of Object.entries(data.reactions)) {
+          const span = document.createElement('span');
+          span.className = 'reaction';
+          span.textContent = `${emoji} ${count}`;
+          reactionsDiv.appendChild(span);
+        }
       }
     }
 
     function showEmojiPicker(messageId, msgElement) {
-      const picker = document.getElementById('emojiPicker');
-      document.removeEventListener('click', hideEmojiPickerOnce);
-      picker.innerHTML = '';
+    emojiPicker.onclick = (e) => e.stopPropagation();
+
+      emojiPicker.innerHTML = '';
       EMOJIS.forEach(emoji => {
         const span = document.createElement('span');
         span.className = 'emoji';
         span.textContent = emoji;
-        span.onclick = () => {
-          socket.emit('react', { message_id: messageId, emoji });
-          picker.style.display = 'none';
+        span.onclick = (e) => {
+          e.stopPropagation();
+          if (socket) {
+            socket.emit('react', { message_id: messageId, emoji });
+          }
+          emojiPicker.style.display = 'none';
         };
-        picker.appendChild(span);
+        emojiPicker.appendChild(span);
       });
-      const rect = msgElement.getBoundingClientRect();
-      picker.style.top = (rect.top - 60) + 'px';
-      picker.style.left = (rect.left + rect.width / 2 - 90) + 'px';
-      picker.style.display = 'grid';
-      setTimeout(() => {
-        document.addEventListener('click', hideEmojiPickerOnce);
-      }, 0);
-    }
 
-    function hideEmojiPickerOnce(e) {
-      const picker = document.getElementById('emojiPicker');
-      if (!picker.contains(e.target)) {
-        picker.style.display = 'none';
-        document.removeEventListener('click', hideEmojiPickerOnce);
+      const rect = msgElement.getBoundingClientRect();
+      let left = rect.left + window.scrollX;
+      let top = rect.top + window.scrollY - 80;
+
+      if (left + 200 > window.innerWidth) {
+        left = window.innerWidth - 210;
       }
+      if (top < 0) {
+        top = rect.bottom + window.scrollY + 10;
+      }
+
+      emojiPicker.style.left = `${left}px`;
+      emojiPicker.style.top = `${top}px`;
+      emojiPicker.style.display = 'grid';
+
+      const handleClickOutside = (e) => {
+        if (!emojiPicker.contains(e.target)) {
+          emojiPicker.style.display = 'none';
+          document.removeEventListener('click', handleClickOutside);
+        }
+      };
+
+      document.addEventListener('click', handleClickOutside);
     }
 
     function scrollToBottom() {
