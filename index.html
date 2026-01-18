@@ -493,6 +493,20 @@
       box-shadow: var(--shadow-lg);
       padding: 2rem;
       border: none;
+      max-height: 80vh;
+      /* Prevent overflowing screen */
+      overflow-y: auto;
+      /* Scroll if content (list) is too long */
+      width: 400px;
+      max-width: 90%;
+    }
+
+    /* Ensure all modals are centered */
+    .modal {
+      display: flex;
+      /* Hidden by default via 'hidden' class, but flex when visible */
+      align-items: center;
+      justify-content: center;
     }
 
     .modal-content h3 {
