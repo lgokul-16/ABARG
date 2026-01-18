@@ -483,8 +483,17 @@
 
     /* Context Menus / Modals */
     .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
       background: rgba(0, 0, 0, 0.4);
       backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .modal-content {
@@ -493,20 +502,21 @@
       box-shadow: var(--shadow-lg);
       padding: 2rem;
       border: none;
-      max-height: 80vh;
-      /* Prevent overflowing screen */
-      overflow-y: auto;
-      /* Scroll if content (list) is too long */
       width: 400px;
       max-width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
     }
 
-    /* Ensure all modals are centered */
-    .modal {
-      display: flex;
-      /* Hidden by default via 'hidden' class, but flex when visible */
-      align-items: center;
-      justify-content: center;
+    .member-list {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 10px;
+      border: 1px solid #f3f4f6;
+      border-radius: 8px;
+      padding: 5px;
     }
 
     .modal-content h3 {
