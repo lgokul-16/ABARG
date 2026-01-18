@@ -98,6 +98,7 @@ class Message(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=True)
     reactions = db.relationship('Reaction', backref='message', cascade='all, delete-orphan')
+    seen_entries = db.relationship('MessageSeen', backref='message', cascade='all, delete-orphan')
 
 class Reaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
