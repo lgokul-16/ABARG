@@ -460,7 +460,7 @@ def get_message_seen_users(message_id):
             "user_id": user.id,
             "username": user.username,
             "profile_image": user.profile_image,
-            "seen_at": seen.seen_at.isoformat()
+            "seen_at": seen.seen_at.isoformat() + 'Z'
         })
     return jsonify(result), 200
 
@@ -526,7 +526,7 @@ def chat_history(conversation_id):
             "sender_dp": sender_dp if sender_dp else sender.profile_image,
             "content": msg.content,
             "image_url": msg.image_url,
-            "timestamp": msg.timestamp.isoformat(),
+            "timestamp": msg.timestamp.isoformat() + 'Z',
             "reactions": reaction_counts,
             "seen_by": seen_map.get(msg.id, [])
         })
@@ -602,7 +602,7 @@ def group_chat_history(group_id):
             "sender_dp": sender_dp if sender_dp else (sender.profile_image if sender else None),
             "content": msg.content,
             "image_url": msg.image_url,
-            "timestamp": msg.timestamp.isoformat(),
+            "timestamp": msg.timestamp.isoformat() + 'Z',
             "reactions": reaction_counts,
             "seen_by": seen_map.get(msg.id, [])
         })
@@ -968,7 +968,7 @@ def handle_message(data):
         'sender_dp': sender_dp,
         'content': msg.content,
         'image_url': msg.image_url,
-        'timestamp': msg.timestamp.isoformat(),
+        'timestamp': msg.timestamp.isoformat() + 'Z',
         'reactions': {}
     }, room=room)
 
