@@ -480,15 +480,11 @@ def delete_private_chat(conversation_id):
     if not participant:
         return jsonify({"msg": "Unauthorized"}), 403
 
-    Message.query.filter_by(conversation_id=conversation_id).delete()
-
-    # Bulk delete reactions for these messages (Complex query simplified for SQLite/Postgres compatibility)
-    # Ideally, use CASCADE in DB. Here manual:
-    # Reaction delete logic is complex without CASCADE, skipping strict cleanup for speed or assume DB handles it
-
-    Participant.query.filter_by(conversation_id=conversation_id).delete()
-    Conversation.query.filter_by(id=conversation_id).delete()
-    db.session.commit()
+    # Use ORM delete to trigger cascading deletes (Reactions, Messages, Participants)
+    conv = db.session.get(Conversation, conversation_id)
+    if conv:
+        db.session.delete(conv)
+        db.session.commit()
     return jsonify({"msg": "Chat deleted"}), 200
 
 
