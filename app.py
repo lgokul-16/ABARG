@@ -447,6 +447,24 @@ def get_message_reactions(message_id):
     return jsonify(result), 200
 
 
+@app.route('/messages/<int:message_id>/seen', methods=['GET'])
+@jwt_required()
+def get_message_seen_users(message_id):
+    # Join MessageSeen with User to get details
+    records = db.session.query(MessageSeen, User).join(User, MessageSeen.user_id == User.id)\
+        .filter(MessageSeen.message_id == message_id).all()
+    
+    result = []
+    for seen, user in records:
+        result.append({
+            "user_id": user.id,
+            "username": user.username,
+            "profile_image": user.profile_image,
+            "seen_at": seen.seen_at.isoformat()
+        })
+    return jsonify(result), 200
+
+
 @app.route('/chat/history/<int:conversation_id>', methods=['GET'])
 @jwt_required()
 def chat_history(conversation_id):

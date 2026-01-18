@@ -438,6 +438,23 @@
       align-items: center;
       justify-content: flex-end;
       gap: 2px;
+      cursor: pointer;
+    }
+
+    .seen-status:hover {
+      opacity: 0.8;
+    }
+
+    .msg-time {
+      font-size: 0.65rem;
+      color: rgba(0, 0, 0, 0.4);
+      text-align: right;
+      margin-top: 2px;
+      margin-right: 4px;
+    }
+
+    .message.user .msg-time {
+      color: rgba(255, 255, 255, 0.7);
     }
 
     /* Input Area */
@@ -762,6 +779,18 @@
       </div>
     </div>
 
+    <div id="seenDetailsModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Seen By</h3>
+        <div class="member-list" id="seenDetailsList"></div>
+        <div style="margin-top:10px;">
+          <button onclick="document.getElementById('seenDetailsModal').classList.add('hidden')"
+            style="width:100%;background:#aaa;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ... existing modals ... -->
     <div id="settingsModal" class="hidden modal">
       <div class="modal-content">
         <h3>Settings</h3>
@@ -788,9 +817,49 @@
 
   <div id="emojiPicker"></div>
 
-  <!-- Libraries -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
+    // ... existing ...
+
+    function formatTime(isoString) {
+      if (!isoString) return '';
+      const date = new Date(isoString);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function showSeenDetails(messageId) {
+      try {
+        const list = document.getElementById('seenDetailsList');
+        list.innerHTML = 'Loading...';
+        document.getElementById('seenDetailsModal').classList.remove('hidden');
+
+        const records = await api(`/messages/${messageId}/seen`);
+        list.innerHTML = '';
+
+        if (records.length === 0) {
+          list.innerHTML = '<div style="padding:10px;text-align:center;color:#888">No views yet</div>';
+          return;
+        }
+
+        records.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'chat-item';
+          div.style.cursor = 'default';
+          div.innerHTML = `
+                   <img src="${avatar(r.profile_image, r.username)}" class="dp">
+                   <div style="flex:1;">
+                       <span style="font-weight:600;">${r.username}</span>
+                       <div style="font-size:0.8rem;color:#888;">${formatTime(r.seen_at)}</div>
+                   </div>
+                `;
+          list.appendChild(div);
+        });
+      } catch (e) {
+        alert("Failed to load: " + e.message);
+      }
+    }
+
+
     // Config
     const API_BASE = window.location.origin;
 
@@ -1578,19 +1647,21 @@
           `;
       }
 
-      // Seen Footer Calculation
+      // Seen Footer (Only for my messages)
       let seenHtml = '';
-      if (msg.seen_by && msg.seen_by.length > 0) {
-        // Filter out myself? No, seeing that I saw it is weird but consistent. Usually seen by OTHERS.
-        // Filter out sender? 
-        const others = msg.seen_by.filter(u => u !== currentUser.username && u !== msg.sender_name);
-        if (others.length > 0) {
-          seenHtml = `<div class="seen-status" title="Seen by: ${others.join(', ')}">👁 ${others.length}</div>`;
-        }
+      if (isMe) {
+        // Always show eye for my messages, clickable to see details
+        // We don't show count here to keep it clean, or we can. User asked for "Eye"
+        seenHtml = `<div class="seen-status clickable" onclick="event.stopPropagation(); showSeenDetails(${msg.id})">
+              <span style="font-size:1.1rem;">👁</span>
+          </div>`;
       }
+
+      const timeHtml = `<div class="msg-time">${formatTime(msg.timestamp)}</div>`;
 
       div.innerHTML = `
         ${contentHtml}
+        ${timeHtml}
         <div class="reactions" id="reactions-${msg.id}"></div>
         <div id="seen-${msg.id}">${seenHtml}</div>
       `;
@@ -1598,7 +1669,7 @@
       // Append to DOM first so getElementById works
       messagesDiv.appendChild(div);
 
-      // Observe for read receipts
+      // Observe for read receipts - ONLY if it's NOT my message
       if (!isMe && !msg.pending) {
         seenObserver.observe(div);
       }
@@ -1611,30 +1682,12 @@
     }
 
     function updateSeenUI(messageId, username) {
-      if (username === currentUser.username) return; // Don't show myself
-
-      const seenDiv = document.getElementById(`seen-${messageId}`);
-      if (!seenDiv) return;
-
-      // Simple text update. 
-      // We need to know current count or list. Parsing HTML is messy.
-      // Let's just append or show "Seen". 
-      // Ideally we track state.
-
-      // Check if already has text
-      if (seenDiv.innerText.includes('👁')) {
-        // Already multiple? 
-        // Just update title?
-        let currentTitle = seenDiv.firstChild.title || "";
-        if (!currentTitle.includes(username)) {
-          // Increment logic is hard without stored array
-          // Lazy UI: Just show "Seen"
-          // Or better: Re-fetch or simplistic "+1"
-          // Let's just create if not exists
-        }
-      } else {
-        seenDiv.innerHTML = `<div class="seen-status" title="Seen by: ${username}">👁</div>`;
-      }
+      // Real-time update: minimal visual change, maybe just Ensure eye is there?
+      // Since we fetch on click, we don't strictly need to update the DOM text 
+      // unless we showed a counter. 
+      // For now, no-op is fine or a small toast?
+      // Let's just log it or maybe add a visual 'pulse' if we wanted.
+      // For simplicity requested: just rely on the click.
     }
 
 
