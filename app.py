@@ -201,13 +201,25 @@ def login():
     password = data.get('password')
 
     user = User.query.filter_by(email=email).first()
-    if not user.check_password(password):
+    if not user or not user.check_password(password):
         return jsonify({"msg": "Bad credentials"}), 401
+    
+    # Auto-allow login (Verification disabled)
     # if not user.is_verified:
     #    return jsonify({"msg": "Email not verified"}), 403
 
     access_token = create_access_token(identity=str(user.id))
     return jsonify(access_token=access_token), 200
+
+# EMERGENCY RESET ROUTE
+@app.route('/reset-db-emergency', methods=['GET'])
+def reset_db():
+    try:
+        db.drop_all()
+        db.create_all()
+        return "Database Wiped and Recreated. You can now register from scratch.", 200
+    except Exception as e:
+        return f"Error: {e}", 500
 
 
 @app.route('/profile', methods=['GET'])
