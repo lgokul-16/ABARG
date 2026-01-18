@@ -1,264 +1,580 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ABARG Chat</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
     :root {
-      --primary: #128C7E;
-      --primary-dark: #075E54;
-      --secondary: #25D366;
-      --bg: #ECE5DD;
-      --chat-bg: #FFF;
-      --text: #333;
-      --light-gray: #ddd;
-      --user-msg: #DCF8C6;
-      --other-msg: #FFFFFF;
-      --border: #ccc;
+      /* Modern Gradient Palette */
+      --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --accent-gradient: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%);
+      --bg-gradient: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
+
+      --glass-bg: rgba(255, 255, 255, 0.95);
+      --glass-border: rgba(255, 255, 255, 0.4);
+
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+      --radius-lg: 16px;
+      --radius-xl: 24px;
     }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
+
     body {
-      background: var(--bg);
-      color: var(--text);
+      background: var(--bg-gradient);
+      color: var(--text-main);
       height: 100vh;
       display: flex;
-      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
     }
+
     .hidden {
       display: none !important;
     }
-    button {
-      cursor: pointer;
-    }
-    input,
-    button {
-      padding: 10px;
-      margin: 5px 0;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
-    button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      font-weight: bold;
-    }
+
+    /* Glassmorphism Container */
     .container {
-      max-width: 800px;
-      margin: 0 auto;
-      width: 100%;
+      max-width: 1200px;
+      width: 95%;
+      height: 90vh;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
       display: flex;
       flex-direction: column;
-      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Common Elements */
+    button {
+      cursor: pointer;
+      border: none;
+      transition: transform 0.1s, opacity 0.2s, box-shadow 0.2s;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    input {
+      padding: 12px 16px;
+      border: 2px solid transparent;
+      background: #f3f4f6;
+      border-radius: var(--radius-lg);
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    input:focus {
+      background: white;
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
     }
 
     /* Auth Screens */
     .auth-screen {
-      padding: 20px;
-      text-align: center;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 2rem;
     }
+
     .auth-screen h2 {
-      margin: 10px 0;
+      margin-bottom: 2rem;
+      font-size: 2.5rem;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
     }
-    .auth-form input {
+
+    .auth-screen .auth-form {
+      width: 100%;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .auth-screen input {
       width: 100%;
     }
 
-    /* Main App */
-    .app-header {
-      background: var(--primary);
+    .auth-screen button {
+      background: var(--primary-gradient);
       color: white;
-      padding: 12px 16px;
+      padding: 14px;
+      border-radius: var(--radius-lg);
+      font-weight: 600;
+      font-size: 1rem;
+      box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+    }
+
+    .auth-screen p {
+      margin-top: 1rem;
+      color: var(--text-muted);
+    }
+
+    .auth-screen a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    /* App Header */
+    .app-header {
+      background: white;
+      padding: 1rem 1.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      border-bottom: 1px solid #f3f4f6;
+      z-index: 10;
     }
+
+    .app-header span {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .app-header button {
+      margin-left: 8px;
+      background: #f3f4f6;
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: var(--radius-lg);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .app-header button:hover {
+      background: #e5e7eb;
+    }
+
+    .app-header button:last-child {
+      background: #fee2e2;
+      color: #ef4444;
+      /* Logout red */
+    }
+
+    .app-header button:last-child:hover {
+      background: #fecaca;
+    }
+
+    /* Layout */
+    .layout-wrapper {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
     .sidebar {
-      width: 100%;
-      background: white;
-      overflow-y: auto;
+      width: 350px;
+      background: #fafafa;
+      border-right: 1px solid #f3f4f6;
+      display: flex;
+      flex-direction: column;
     }
+
+    .sidebar-actions {
+      padding: 1rem;
+    }
+
+    .sidebar-actions button {
+      width: 100%;
+      background: var(--primary-gradient);
+      color: white;
+      padding: 12px;
+      border-radius: var(--radius-lg);
+      font-weight: 600;
+    }
+
     .chat-list {
       list-style: none;
-    }
-    .chat-item {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--light-gray);
-      display: flex;
-      justify-content: space-between;
-      cursor: pointer;
-      align-items: center;
-    }
-    .chat-item:hover {
-      background: #f5f5f5;
-    }
-    .main-chat {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      background: var(--chat-bg);
-    }
-    .chat-header {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--light-gray);
-      font-weight: bold;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .messages {
-      flex: 1;
-      padding: 15px;
+      padding: 0 0.5rem;
       overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-    }
-    .message {
-      max-width: 70%;
-      padding: 8px 12px;
-      margin: 4px 0;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .message.user {
-      background: var(--user-msg);
-      align-self: flex-end;
-    }
-    .message.other {
-      background: var(--other-msg);
-      align-self: flex-start;
-      border: 1px solid var(--light-gray);
-    }
-    .message img {
-      max-width: 200px;
-      border-radius: 8px;
-    }
-    .reactions {
-      font-size: 0.8em;
-      margin-top: 4px;
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-    }
-    .input-area {
-      display: flex;
-      padding: 10px;
-      background: white;
-      border-top: 1px solid var(--light-gray);
-    }
-    .input-area input {
       flex: 1;
-      border: 1px solid var(--border);
-      padding: 10px;
-      border-radius: 20px;
-      margin-right: 8px;
     }
 
-    /* EMOJI PICKER */
-    #emojiPicker {
-      position: fixed;
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 12px;
-      padding: 6px;
-      z-index: 100000;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-      display: none;
-      gap: 6px;
-      width: max-content;
-      grid-template-columns: repeat(5, 1fr);
-      pointer-events: auto;
+    .sidebar h4 {
+      padding: 1rem 1rem 0.5rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      font-weight: 700;
     }
 
-    .emoji {
-      font-size: 20px;
-      width: 32px;
-      height: 32px;
+    .chat-item {
       display: flex;
       align-items: center;
-      justify-content: center;
+      padding: 10px;
+      margin-bottom: 4px;
+      border-radius: 12px;
       cursor: pointer;
-      border-radius: 6px;
-    }
-
-    .emoji:hover {
-      background: #f0f0f0;
-    }
-
-    .reaction {
-      background: #eee;
-      padding: 2px 6px;
-      border-radius: 10px;
-      cursor: default;
-      font-size: 0.9em;
-      margin-right: 4px;
       transition: background 0.2s;
     }
 
-    .reaction:hover {
-      background: #ddd;
+    .chat-item:hover {
+      background: white;
+      box-shadow: var(--shadow-sm);
     }
 
-    /* Modals */
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+    .chat-item .dp {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      object-fit: cover;
+      margin-right: 12px;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-item span {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    /* Main Chat */
+    .main-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      position: relative;
+    }
+
+    /* Chat Header */
+    .chat-header {
+      padding: 10px 20px;
+      height: 70px;
+      border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+    }
+
+    .chat-header img.dp {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      margin-right: 12px;
+      border: 2px solid #f3f4f6;
+    }
+
+    .chat-header-info {
+      display: flex;
+      align-items: center;
+    }
+
+    .chat-header-name {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .chat-header-status {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .chat-actions button {
+      background: transparent;
+      padding: 8px;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+    }
+
+    .chat-actions button:hover {
+      background: #f3f4f6;
+      color: var(--text-main);
+    }
+
+    .chat-actions input[type="file"] {
+      display: none;
+    }
+
+    /* Messages Area */
+    .messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #ffffff;
+      /* Subtle pattern */
+      background-image: radial-gradient(#667eea 0.5px, transparent 0.5px);
+      background-size: 20px 20px;
+      background-color: #f8fafc;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 10px 16px;
+      margin: 4px 0;
+      border-radius: 18px;
+      position: relative;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      animation: messagePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes messagePop {
+      0% {
+        transform: scale(0.9);
+        opacity: 0;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--primary-gradient);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.other {
+      align-self: flex-start;
+      background: white;
+      color: var(--text-main);
+      border-bottom-left-radius: 4px;
+      border: 1px solid #f1f5f9;
+    }
+
+    .message.pending {
+      opacity: 0.8;
+    }
+
+    .message.pending::after {
+      content: '...';
+      position: absolute;
+      bottom: 2px;
+      right: 6px;
+      font-size: 0.7em;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .message img {
+      border-radius: 12px;
+      margin-top: 5px;
+      max-width: 100%;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .sender-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #667eea;
+      margin-bottom: 2px;
+    }
+
+    /* Reactions */
+    .reactions {
+      display: flex;
+      flex-wrap: wrap;
+      margin-top: 4px;
+      gap: 4px;
+    }
+
+    .reaction {
+      font-size: 0.75rem;
+      background: rgba(255, 255, 255, 0.9);
+      color: #4b5563;
+      padding: 2px 8px;
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      border: 1px solid #f3f4f6;
+    }
+
+    .message.user .reaction {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+    }
+
+    /* Input Area */
+    .input-area {
+      padding: 1.5rem;
+      background: white;
+      border-top: 1px solid #f3f4f6;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .input-area select {
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+
+    .input-area input {
+      border-radius: 24px;
+      padding: 12px 20px;
+      font-size: 1rem;
+    }
+
+    .input-area button {
+      background: var(--primary-gradient);
+      color: white;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      font-size: 1.2rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(102, 126, 234, 0.4);
     }
 
-    .dp {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-right: 10px;
+    .input-area button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(102, 126, 234, 0.5);
+    }
+
+    .input-area button.secondary-btn {
+      background: #f3f4f6;
+      color: var(--text-muted);
+      box-shadow: none;
+    }
+
+    .input-area button.secondary-btn:hover {
+      background: #e5e7eb;
+      color: var(--text-main);
+    }
+
+    /* Context Menus / Modals */
+    .modal {
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
     }
 
     .modal-content {
       background: white;
-      padding: 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 400px;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      padding: 2rem;
+      border: none;
     }
 
-    .member-list {
-      max-height: 200px;
-      overflow-y: auto;
-      margin: 10px 0;
-      border: 1px solid var(--border);
+    .modal-content h3 {
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+      color: var(--text-main);
+    }
+
+    #emojiPicker {
+      position: fixed;
+      display: none;
+      background: white;
+      z-index: 10000;
+      grid-template-columns: repeat(5, 1fr);
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      padding: 12px;
+      gap: 8px;
+    }
+
+    .emoji {
+      font-size: 24px;
       border-radius: 8px;
-      padding: 10px;
+      transition: transform 0.2s;
+    }
+
+    .emoji:hover {
+      background: #f3f4f6;
+      transform: scale(1.2);
+    }
+
+    .message img {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 12px;
+      margin-top: 5px;
+      cursor: pointer;
+      object-fit: contain;
+    }
+
+    /* Other specifics */
+    /* Fixed Layout CSS */
+    .layout-wrapper {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .sidebar {
+      width: 300px;
+      /* Fixed width */
+      flex-shrink: 0;
+      background: #fafafa;
+      border-right: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      /* Container fixed, children scroll */
+    }
+
+    .main-chat {
+      flex: 1;
+      /* Takes remaining space */
+      display: flex;
+      flex-direction: column;
+      background: white;
+      position: relative;
+      width: 0;
+      /* Important for flex text wrapping */
+      min-width: 0;
     }
 
     .member-item {
-      padding: 5px;
-      cursor: pointer;
-    }
-
-    .member-item:hover {
-      background: #f0f0f0;
-    }
-
-    .selected {
-      background: var(--primary);
-      color: white;
+      color: var(--text-main);
+      /* Fix invisible text */
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <!-- Auth Screens -->
@@ -289,29 +605,35 @@
     </div>
 
     <!-- Main App -->
-    <div id="app" class="hidden">
+    <div id="app" class="hidden" style="display:flex; flex-direction:column; height:100%;">
       <div class="app-header">
         <span>ABARG</span>
         <div>
-          <button onclick="showCreateGroup()" style="font-size:0.9em;padding:6px 10px;margin-right:5px;">+ Group</button>
+          <button onclick="showCreateGroup()" style="font-size:0.9em;padding:6px 10px;margin-right:5px;">+
+            Group</button>
+          <button onclick="showSettings()" style="font-size:0.9em;padding:6px 10px;margin-right:5px;">Settings</button>
           <button onclick="logout()" style="font-size:0.9em;padding:6px 10px;">Logout</button>
         </div>
       </div>
-      <div style="display:flex;flex:1;overflow:hidden;">
-        <div id="sidebar" class="sidebar" style="width:40%;min-width:250px;">
+
+      <div class="layout-wrapper">
+        <div id="sidebar" class="sidebar">
           <div style="padding:10px;">
             <button onclick="showAddFriend()">+ Add Friend</button>
           </div>
           <h4 style="padding:10px 16px;margin:0;">Chats</h4>
           <ul id="chatList" class="chat-list"></ul>
           <h4 style="padding:10px 16px;margin:0;">Groups</h4>
-          <ul id="groupList" class="chat-list"></ul>
+          <ul id="groupList" class="chat-list" style="flex:1;"></ul> <!-- Ensure this takes space if empty -->
           <div id="incomingRequests"></div>
         </div>
-        <div id="chatArea" class="main-chat hidden" style="width:60%;">
+
+        <div id="chatArea" class="main-chat hidden">
           <div id="chatHeader" class="chat-header">
             <input type="file" id="dpUpload" hidden onchange="uploadDP(this)" />
             <button onclick="document.getElementById('dpUpload').click()">Change DP</button>
+            <button id="staticChangeGroupDpBtn" class="hidden"
+              onclick="document.getElementById('groupIconUpload').click()">Group Icon (Sigma)</button>
             <div style="display:flex;align-items:center;gap:10px;">
               <img id="chatDp" class="dp" />
               <span>Select a chat</span>
@@ -320,14 +642,32 @@
               <button id="deleteChatBtn" class="hidden" onclick="deleteCurrentChat()">🗑</button>
               <button id="deleteGroupBtn" class="hidden" onclick="deleteCurrentGroup()">🗑</button>
               <button id="groupMembersBtn" class="hidden" onclick="showGroupMembers()">👥</button>
+              <input type="file" id="groupIconUpload" hidden onchange="uploadGroupIcon(this)" />
             </div>
           </div>
           <div id="messages" class="messages"></div>
           <div class="input-area">
+            <select id="msgTimer" style="margin-right:5px;padding:10px;border-radius:20px;border:1px solid #ccc;">
+              <option value="">Off</option>
+              <option value="10">10s</option>
+              <option value="60">1m</option>
+              <option value="300">5m</option>
+              <option value="3600">1h</option>
+            </select>
             <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)" />
             <button onclick="sendMessage()">Send</button>
             <button onclick="document.getElementById('imageUpload').click()" style="margin-left:5px;">📷</button>
             <input type="file" id="imageUpload" accept="image/*" onchange="uploadImage(this)" style="display:none;" />
+          </div>
+        </div>
+
+        <!-- Welcome Screen (When no chat selected) -->
+        <div id="welcomeScreen"
+          style="flex:1; display:flex; justify-content:center; align-items:center; color:#888; background:rgba(255,255,255,0.5);">
+          <div style="text-align:center;">
+            <div style="font-size:3rem; margin-bottom:1rem;">👋</div>
+            <h2>Welcome to ABARG</h2>
+            <p>Select a chat to start messaging</p>
           </div>
         </div>
       </div>
@@ -366,6 +706,31 @@
         </div>
       </div>
     </div>
+
+    <div id="emojiPicker"></div>
+
+    <div id="settingsModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Settings</h3>
+        <div style="display:flex;align-items:center;margin-bottom:10px;">
+          <img id="settingsDp" class="dp" style="width:48px;height:48px;margin-right:10px;" />
+          <div>
+            <input type="file" id="settingsDpUpload" hidden onchange="uploadSettingsDP(this)" />
+            <button onclick="document.getElementById('settingsDpUpload').click()">Change DP</button>
+          </div>
+        </div>
+        <label>Username</label>
+        <input type="text" id="settingsUsername" disabled style="background:#f0f0f0;" />
+        <label>Email</label>
+        <input type="text" id="settingsEmail" disabled style="background:#f0f0f0;" />
+        <label>Description (About)</label>
+        <input type="text" id="settingsDescription" placeholder="Hey there! I am using ABARG." />
+        <div style="margin-top:10px;">
+          <button onclick="updateProfileDescription()">Save Description</button>
+          <button onclick="hideSettings()" style="width:100%;background:#aaa;margin-top:5px;">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="emojiPicker"></div>
@@ -374,7 +739,7 @@
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     // Config
-const API_BASE = 'https://abarg.up.railway.app';
+    const API_BASE = window.location.origin;
 
 
     let currentUser = null;
@@ -431,6 +796,7 @@ const API_BASE = 'https://abarg.up.railway.app';
       if (token && !['/login', '/register', '/verify-otp'].includes(url)) {
         headers['Authorization'] = `Bearer ${token}`;
       }
+      console.log(`API Call to ${url}`, { token: token ? 'Presnet' : 'Missing', headers });
       const res = await fetch(API_BASE + url, { ...options, headers });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ msg: 'Server error' }));
@@ -444,6 +810,7 @@ const API_BASE = 'https://abarg.up.railway.app';
       if (!confirm("Delete this group permanently?")) return;
       try {
         await api(`/groups/${currentChatId}/delete`, { method: 'DELETE' });
+        document.getElementById('welcomeScreen').classList.remove('hidden'); // Show welcome
         chatArea.classList.add('hidden');
         currentChatId = null;
         currentChatType = null;
@@ -531,12 +898,15 @@ const API_BASE = 'https://abarg.up.railway.app';
 
     // Socket.IO
     function connectSocket(token) {
-      socket = io('https://abarg.up.railway.app', { query: { token }, transports: ['websocket'] });
+      socket = io(window.location.origin, { query: { token }, transports: ['websocket'] });
 
       socket.on('connect', () => console.log('Socket connected'));
       socket.on('new_message', addMessageToUI);
       socket.on('new_group_message', addMessageToUI);
-      socket.on('reaction_update', updateReactionInUI);
+      socket.on('reaction_update', (data) => {
+        console.log("Socket: reaction_update received:", data);
+        updateReactionsUI(data.message_id, data.reactions);
+      });
       socket.on('error', (data) => alert('Socket error: ' + data.msg));
     }
 
@@ -563,8 +933,13 @@ const API_BASE = 'https://abarg.up.railway.app';
         groups.forEach(group => {
           const li = document.createElement('li');
           li.className = 'chat-item';
-          li.innerHTML = `<span>${group.name} (${group.member_count})</span>`;
-          li.onclick = () => openGroupChat(group.id, group.name);
+          // Use group image or default
+          const icon = group.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(group.name)}&background=random`;
+          li.innerHTML = `
+             <img src="${icon}" class="dp">
+             <span>${group.name}</span>
+          `;
+          li.onclick = () => openGroupChat(group.id, group.name, icon);
           groupList.appendChild(li);
         });
       } catch (e) {
@@ -627,9 +1002,11 @@ const API_BASE = 'https://abarg.up.railway.app';
       selectedFriendIds = [];
       friends.forEach(friend => {
         const div = document.createElement('div');
-        div.className = 'member-item';
+        div.className = 'member-item'; // This color is fixed in CSS now
         div.textContent = friend.username;
         div.dataset.userId = friend.id;
+        div.style.padding = "5px"; // Add some padding
+        div.style.cursor = "pointer";
         div.onclick = toggleFriendSelection;
         list.appendChild(div);
       });
@@ -640,10 +1017,12 @@ const API_BASE = 'https://abarg.up.railway.app';
       const index = selectedFriendIds.indexOf(userId);
       if (index === -1) {
         selectedFriendIds.push(userId);
-        e.target.classList.add('selected');
+        e.target.style.background = 'var(--primary-gradient)'; // Visual feedback
+        e.target.style.color = 'white';
       } else {
         selectedFriendIds.splice(index, 1);
-        e.target.classList.remove('selected');
+        e.target.style.background = 'transparent';
+        e.target.style.color = 'var(--text-main)';
       }
     }
 
@@ -673,18 +1052,55 @@ const API_BASE = 'https://abarg.up.railway.app';
     async function openPrivateChat(friendId, friendName, friendDp) {
       deleteChatBtn.classList.remove('hidden');
       deleteGroupBtn.classList.add('hidden');
+      document.getElementById('staticChangeGroupDpBtn').classList.add('hidden'); // Ensure hidden
+
+      // Hide Welcome, Show Chat
+      document.getElementById('welcomeScreen').classList.add('hidden');
+      chatArea.classList.remove('hidden');
+
+
       try {
+        // Fetch full profile to get Description (since friend list might be stale or simple)
+        // Optimization: We could pass description from friend list click, but let's just fetch or use what we have.
+        // Actually, let's just fetch the friend details if possible, or assume passed data is enough.
+        // For now, we update header with simple name.
+
+        chatHeader.querySelector('span').innerHTML = `
+            <div style="display:flex;flex-direction:column;">
+                <span>${friendName}</span>
+                <span id="headerStatus" style="font-size:0.75em;color:#666;font-weight:normal;"></span>
+            </div>
+        `;
+
+        // Find friend in friend list to get description (avoids extra API call if we re-render friend list correctly)
+        // But friend list isn't globally stored easily. Let's just rely on updated loadFriends?
+        // Let's implement a quick fetch or just look at UI.
+        // Better: openPrivateChat arguments are from click. Let's update arguments or fetch.
+        // We will fetch /friends again to find this user or just accept it's missing until reload.
+
         const convData = await api(`/conversation-with/${friendId}`);
         currentChatId = convData.conversation_id;
         currentChatType = 'private';
-        chatHeader.querySelector('span').textContent = friendName;
+
         document.getElementById('chatDp').src = avatar(friendDp, friendName);
         groupMembersBtn.classList.add('hidden');
-        chatArea.classList.remove('hidden');
+
         messagesDiv.innerHTML = '';
+
+        // Fetch history
         const history = await api(`/chat/history/${currentChatId}`);
         messagesDiv.innerHTML = '';
         history.forEach(addMessageToUI);
+
+        // Fetch Friend Details for Description update
+        try {
+          const friends = await api('/friends');
+          const f = friends.find(u => u.id === friendId);
+          if (f && f.description) {
+            document.getElementById('headerStatus').textContent = f.description;
+          }
+        } catch (e) { }
+
         if (socket) {
           socket.emit('join_private_chat', { conversation_id: currentChatId });
         }
@@ -694,26 +1110,123 @@ const API_BASE = 'https://abarg.up.railway.app';
       }
     }
 
-    async function openGroupChat(groupId, groupName) {
-      deleteChatBtn.classList.add('hidden');
-      deleteGroupBtn.classList.remove('hidden');
+    async function openGroupChat(id, name, iconUrl) {
+      if (currentChatId === id && currentChatType === 'group') return;
+      currentChatId = id;
+      currentChatType = 'group';
+      currentChatName = name;
+
+      // Hide Welcome, Show Chat
+      document.getElementById('welcomeScreen').classList.add('hidden');
+      chatArea.classList.remove('hidden');
+
+
+      // Reset UI
+      document.getElementById('chatDp').src = iconUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+      document.getElementById('chatDp').parentElement.querySelector('span').textContent = name;
+      messagesDiv.innerHTML = '';
+
+      // Admin check for DP upload
       try {
-        currentChatId = groupId;
-        currentChatType = 'group';
-        chatHeader.querySelector('span').textContent = groupName;
-        document.getElementById('chatDp').src = avatar(null, groupName);
-        groupMembersBtn.classList.remove('hidden');
-        chatArea.classList.remove('hidden');
-        messagesDiv.innerHTML = '';
+        const members = await api(`/groups/${id}/members`);
+        // Backend returns "id" for user id in this route
+        const myMember = members.find(m => m.id === currentUser.id);
+        const isAdmin = myMember && myMember.role === 'admin';
+
+        if (isAdmin) {
+          document.getElementById('staticChangeGroupDpBtn').classList.remove('hidden');
+        } else {
+          document.getElementById('staticChangeGroupDpBtn').classList.add('hidden');
+        }
+      } catch (e) { console.error(e); }
+
+      document.getElementById('deleteChatBtn').classList.add('hidden');
+      document.getElementById('deleteGroupBtn').classList.remove('hidden');
+      document.getElementById('groupMembersBtn').classList.remove('hidden');
+
+      socket.emit('join_group_chat', { group_id: id });
+      loadGroupHistory(id);
+    }
+
+    async function uploadGroupIcon(input) {
+      const file = input.files[0];
+      if (!file || currentChatType !== 'group') return;
+      const form = new FormData();
+      form.append("image", file);
+      const token = localStorage.getItem("token");
+      try {
+        const res = await fetch(API_BASE + `/groups/${currentChatId}/upload-icon`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form
+        });
+        if (res.ok) {
+          alert("Group icon updated!");
+          loadGroups(); // Refresh list
+          // Update header logic would need reload or manual generic update
+          const data = await res.json();
+          document.getElementById('chatDp').src = data.url;
+        } else {
+          alert("Failed (Only Sigma admins can do this)");
+        }
+      } catch (e) { alert(e.message); }
+    }
+
+    async function loadGroupHistory(groupId) {
+      try {
         const history = await api(`/group-chat/history/${groupId}`);
         messagesDiv.innerHTML = '';
         history.forEach(addMessageToUI);
-        if (socket) {
-          socket.emit('join_group_chat', { group_id: groupId });
-        }
+        scrollToBottom();
       } catch (e) {
-        console.error("Error opening group chat:", e);
-        alert("Could not open group chat: " + e.message);
+        console.error("Error loading group chat history:", e);
+      }
+    }
+
+    function scrollToBottom() {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Settings
+    function showSettings() {
+      document.getElementById('settingsModal').classList.remove('hidden');
+      document.getElementById('settingsUsername').value = currentUser.username;
+      document.getElementById('settingsEmail').value = currentUser.email;
+      document.getElementById('settingsDescription').value = currentUser.description || '';
+      document.getElementById('settingsDp').src = avatar(currentUser.profile_image, currentUser.username);
+    }
+
+    function hideSettings() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    async function updateProfileDescription() {
+      const desc = document.getElementById('settingsDescription').value;
+      try {
+        await api('/profile/update', { method: 'POST', body: JSON.stringify({ description: desc }) });
+        currentUser.description = desc;
+        alert("Description updated!");
+      } catch (e) { alert(e.message); }
+    }
+
+    async function uploadSettingsDP(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('image', file);
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(API_BASE + '/profile/upload-dp', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
+        });
+        const data = await res.json();
+        currentUser.profile_image = data.url;
+        document.getElementById('settingsDp').src = data.url;
+        alert("Profile picture updated!");
+      } catch (e) {
+        alert("Upload failed: " + e.message);
       }
     }
 
@@ -733,14 +1246,94 @@ const API_BASE = 'https://abarg.up.railway.app';
         const members = await api(`/groups/${currentChatId}/members`);
         const list = document.getElementById('groupMembersList');
         list.innerHTML = '';
+
+        // Find my role to determine if I can kick
+        const myMember = members.find(m => m.id === currentUser.id);
+        const myRole = myMember ? myMember.role : 'member';
+
         members.forEach(member => {
           const div = document.createElement('div');
           div.className = 'member-item';
-          div.textContent = member.username;
+          div.style.display = 'flex';
+          div.style.justifyContent = 'space-between';
+          div.style.alignItems = 'center';
+          div.style.color = "var(--text-main)"; // Ensure visible
+
+          let actions = '';
+          // Only show actions if I am admin and target is not me
+          if (myRole === 'admin' && member.id !== currentUser.id) {
+            if (member.role !== 'admin') {
+              actions += `<button onclick="promoteMember(${member.id})" style="background:gold;color:black;padding:2px 6px;font-size:0.8em;margin-left:2px;">Promote</button>`;
+            } else {
+              actions += `<button onclick="demoteMember(${member.id})" style="background:orange;padding:2px 6px;font-size:0.8em;margin-left:2px;">Demote</button>`;
+            }
+            actions += `<button onclick="kickMember(${member.id})" style="background:red;color:white;padding:2px 6px;font-size:0.8em;margin-left:2px;">Kick</button>`;
+          }
+
+          const roleBadge = member.role === 'admin' ? '<span style="color:gold;font-weight:bold;margin-left:5px;">(Sigma)</span>' : '';
+          const desc = member.description ? `<div style="font-size:0.75em;color:gray;">${member.description}</div>` : '';
+
+          div.innerHTML = `
+                <div style="display:flex;align-items:center;">
+                    <img src="${avatar(member.custom_profile_image || member.profile_image, member.username)}" class="dp" style="width:32px;height:32px;margin-right:8px;">
+                    <div>
+                        <div style="font-weight:500;">${member.username} ${roleBadge}</div>
+                        ${desc}
+                    </div>
+                </div>
+                <div>${actions}</div>
+            `;
           list.appendChild(div);
         });
       } catch (e) {
         console.error("Error loading group members:", e);
+      }
+    }
+
+    async function kickMember(userId) {
+      if (!confirm("Kick user?")) return;
+      await api(`/groups/${currentChatId}/kick`, { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+      loadGroupMembers();
+    }
+    async function promoteMember(userId) {
+      await api(`/groups/${currentChatId}/promote`, { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+      loadGroupMembers();
+    }
+    async function demoteMember(userId) {
+      await api(`/groups/${currentChatId}/demote`, { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+      loadGroupMembers();
+    }
+
+    // Contextual DP
+    async function uploadDP(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('image', file);
+      const token = localStorage.getItem('token');
+      try {
+        // If inside chat, use contextual route
+        if (currentChatId) {
+          const type = currentChatType; // 'private' or 'group'
+          const res = await fetch(API_BASE + `/chat/${type}/${currentChatId}/upload-dp`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData
+          });
+          const data = await res.json();
+          document.getElementById('chatDp').src = data.url; // Update header immediately
+          alert("Chat DP updated!");
+        } else {
+          // Global Profile DP (fallback logic if called from profile settings)
+          const res = await fetch(API_BASE + '/profile/upload-dp', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData
+          });
+          alert("Global DP updated!");
+        }
+      } catch (e) {
+        alert("Upload failed: " + e.message);
       }
     }
 
@@ -757,7 +1350,10 @@ const API_BASE = 'https://abarg.up.railway.app';
       if (!confirm("Delete this chat permanently?")) return;
       try {
         await api(`/chat/delete/${currentChatId}`, { method: 'DELETE' });
+
+        document.getElementById('welcomeScreen').classList.remove('hidden'); // Show welcome
         chatArea.classList.add('hidden');
+
         currentChatId = null;
         currentChatType = null;
         loadChats();
@@ -783,6 +1379,27 @@ const API_BASE = 'https://abarg.up.railway.app';
     async function uploadImage(input) {
       const file = input.files[0];
       if (!file) return;
+
+      // 1. Optimistic UI
+      const tempId = 'temp_' + Date.now();
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const base64 = e.target.result;
+        // Add optimistic message
+        addMessageToUI({
+          id: tempId,
+          client_temp_id: tempId,
+          sender_id: currentUser.id,
+          sender_name: currentUser.username,
+          sender_dp: currentUser.profile_image,
+          image_url: base64, // Display local base64
+          timestamp: new Date().toISOString(),
+          reactions: {},
+          pending: true
+        });
+      };
+      reader.readAsDataURL(file);
+
       const formData = new FormData();
       formData.append('image', file);
       const token = localStorage.getItem('token');
@@ -793,93 +1410,161 @@ const API_BASE = 'https://abarg.up.railway.app';
           body: formData
         });
         const data = await res.json();
+
+        if (!res.ok) throw new Error(data.msg || "Server Error");
+
+        // 2. Send Real Message
         if (socket && currentChatId) {
           if (currentChatType === 'private') {
             socket.emit('send_message', {
               conversation_id: currentChatId,
-              image_url: data.url
+              image_url: data.url,
+              lifespan: document.getElementById('msgTimer').value || null,
+              client_temp_id: tempId
             });
-          } else {
+          } else if (currentChatType === 'group') {
             socket.emit('send_message', {
               group_id: currentChatId,
-              image_url: data.url
+              image_url: data.url,
+              lifespan: document.getElementById('msgTimer').value || null,
+              client_temp_id: tempId
             });
           }
         }
       } catch (e) {
-        alert('Upload failed: ' + e.message);
+        alert('Image upload failed: ' + e.message);
+        // Remove optimistic message if failed
+        const failDiv = document.getElementById(`msg-${tempId}`);
+        if (failDiv) failDiv.remove();
       }
-      input.value = '';
     }
+
+
+
+    function addMessageToUI(msg) {
+      if (
+        (currentChatType === 'private' && msg.conversation_id && currentChatId !== msg.conversation_id) || // Wait, socket event might not have conv_id?
+        // Actually socket room filtering handles this usually, but good to check.
+        // However, msg object from backend might not have conv_id if we didn't add it in emit.
+        // Let's trust logic for now.
+        false
+      ) return;
+
+      // Handle Optimistic Replacement
+      if (msg.client_temp_id) {
+        const tempEl = document.getElementById(`msg-${msg.client_temp_id}`);
+        if (tempEl) {
+          tempEl.remove(); // Remove temporary, replace with finalized
+        }
+      }
+
+      // Check duplicates (real ID)
+      if (document.getElementById(`msg-${msg.id}`)) return;
+
+      const div = document.createElement('div');
+      const isMe = msg.sender_id === currentUser.id;
+
+      // Add ID to div for replacement logic
+      const elementId = msg.pending ? `msg-${msg.id}` : `msg-${msg.id}`;
+      div.id = elementId;
+
+      div.className = `message ${isMe ? 'user' : 'other'} ${msg.pending ? 'pending' : ''}`;
+
+      // Avatar (Contextual if available) - ONLY show in Groups for others
+      const dpUrl = msg.sender_dp;
+      let contentHtml = '';
+
+      if (currentChatType === 'group' && !isMe) {
+        // In Group: Show small avatar + Name
+        contentHtml += `
+            <div style="display:flex; align-items:flex-start;">
+                 <img src="${avatar(dpUrl, msg.sender_name)}" style="width:36px;height:36px;border-radius:50%;margin-right:8px;flex-shrink:0;">
+                 <div>
+                    <div class="sender-name">${msg.sender_name}</div>
+                    ${msg.content ? `<div>${msg.content}</div>` : ''}
+                    ${msg.image_url ? `<img src="${msg.image_url}" style="pointer-events:none;">` : ''}
+                 </div>
+            </div>
+          `;
+      } else {
+        // Private Chat OR Me: Clean bubble
+        contentHtml += `
+            ${msg.content ? `<div>${msg.content}</div>` : ''}
+            ${msg.image_url ? `<img src="${msg.image_url}" style="pointer-events:none;">` : ''}
+          `;
+      }
+
+      div.innerHTML = `
+        ${contentHtml}
+        <div class="reactions" id="reactions-${msg.id}"></div>
+      `;
+
+      // Append to DOM first so getElementById works
+      messagesDiv.appendChild(div);
+
+      updateReactionsUI(msg.id, msg.reactions);
+
+      // On click (Single click)
+      div.onclick = (e) => showEmojiPicker(e, msg.id);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
 
     function sendMessage() {
       const content = messageInput.value.trim();
-      if (!content || !socket || !currentChatId) return;
-      if (currentChatType === 'private') {
-        socket.emit('send_message', {
-          conversation_id: currentChatId,
-          content: content
+      const lifespan = document.getElementById('msgTimer').value || null;
+      if (!content) return;
+
+      if (socket && currentChatId) {
+        const tempId = 'temp_' + Date.now();
+
+        // 1. Optimistic UI
+        addMessageToUI({
+          id: tempId,
+          client_temp_id: tempId,
+          sender_id: currentUser.id,
+          sender_name: currentUser.username,
+          sender_dp: currentUser.profile_image,
+          content: content,
+          timestamp: new Date().toISOString(),
+          reactions: {},
+          pending: true
         });
-      } else {
-        socket.emit('send_message', {
-          group_id: currentChatId,
-          content: content
-        });
+
+        // 2. Emit
+        const payload = { content, lifespan, client_temp_id: tempId };
+        if (currentChatType === 'private') {
+          payload.conversation_id = currentChatId;
+        } else {
+          payload.group_id = currentChatId;
+        }
+        socket.emit('send_message', payload);
+        messageInput.value = '';
       }
-      messageInput.value = '';
     }
 
     function handleKeyPress(e) {
       if (e.key === 'Enter') sendMessage();
     }
 
+
     // MESSAGE RENDERING WITH REACTIONS
-    function addMessageToUI(data) {
-      const div = document.createElement('div');
-      div.className = 'message';
-      div.dataset.messageId = data.id;
-
-      let messageContent = data.content || '';
-      if (currentChatType === 'group' && data.sender_name && data.sender_id !== currentUser?.id) {
-        messageContent = `${data.sender_name}: ${messageContent}`;
+    function updateReactionsUI(messageId, reactions) {
+      console.log("updateReactionsUI called for msg:", messageId, reactions);
+      const reactionsDiv = document.getElementById(`reactions-${messageId}`);
+      if (!reactionsDiv) {
+        console.warn("Reactions div not found for msg:", messageId);
+        return;
       }
-
-      if (data.image_url) {
-        div.innerHTML = `<img src="${data.image_url}" />`;
-      } else {
-        div.textContent = messageContent || '';
-      }
-
-      const reactionsDiv = document.createElement('div');
-      reactionsDiv.className = 'reactions';
-      reactionsDiv.dataset.messageId = data.id;
-
-      if (data.reactions && typeof data.reactions === 'object') {
-        for (const [emoji, count] of Object.entries(data.reactions)) {
+      reactionsDiv.innerHTML = '';
+      if (reactions && typeof reactions === 'object') {
+        Object.entries(reactions).forEach(([emoji, count]) => {
           const span = document.createElement('span');
           span.className = 'reaction';
           span.textContent = `${emoji} ${count}`;
           reactionsDiv.appendChild(span);
-        }
+        });
       }
-
-      div.appendChild(reactionsDiv);
-
-      if (currentUser && data.sender_id === currentUser.id) {
-        div.classList.add('user');
-      } else {
-        div.classList.add('other');
-      }
-
- div.onclick = (e) => {
-  e.stopPropagation();   // <<< ADD THIS
-  if (e.target.closest('.reaction')) return;
-  showEmojiPicker(data.id, div);
-};
-
-
-      messagesDiv.appendChild(div);
-      scrollToBottom();
     }
 
     async function uploadDP(input) {
@@ -899,62 +1584,123 @@ const API_BASE = 'https://abarg.up.railway.app';
       loadChats();
     }
 
-    function updateReactionInUI(data) {
-      const reactionsDiv = document.querySelector(`.reactions[data-message-id="${data.message_id}"]`);
-      if (!reactionsDiv) return;
-      reactionsDiv.innerHTML = '';
-      if (data.reactions && typeof data.reactions === 'object') {
-        for (const [emoji, count] of Object.entries(data.reactions)) {
-          const span = document.createElement('span');
-          span.className = 'reaction';
-          span.textContent = `${emoji} ${count}`;
-          reactionsDiv.appendChild(span);
-        }
+    async function uploadGroupIcon(input) {
+      if (!currentChatId || currentChatType !== 'group') return;
+      const file = input.files[0];
+      if (!file) return;
+      const form = new FormData();
+      form.append("image", file);
+      const token = localStorage.getItem("token");
+      try {
+        const res = await fetch(API_BASE + `/groups/${currentChatId}/upload-icon`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.msg || "Server Error");
+
+        document.getElementById('chatDp').src = data.url;
+        alert("Group Icon (Sigma) updated!");
+        loadChats(); // refresh sidebar to show new icon
+      } catch (e) {
+        alert("Failed (" + e.message + ")");
       }
     }
 
-    function showEmojiPicker(messageId, msgElement) {
-    emojiPicker.onclick = (e) => e.stopPropagation();
+
+
+    function showEmojiPicker(e, messageId) {
+      console.log("showEmojiPicker called for msg:", messageId);
+      e.stopPropagation(); // Stop bubbling
+      e.preventDefault();
+
+      const msgElement = e.currentTarget; // The message div
 
       emojiPicker.innerHTML = '';
       EMOJIS.forEach(emoji => {
         const span = document.createElement('span');
         span.className = 'emoji';
         span.textContent = emoji;
-        span.onclick = (e) => {
-          e.stopPropagation();
+        span.onclick = (evt) => {
+          evt.stopPropagation();
+          console.log("Emoji selected:", emoji);
           if (socket) {
+            console.log("Emitting react:", { message_id: messageId, emoji });
+
+            // 1. Optimistic UI Update
+            const reactionsDiv = document.getElementById(`reactions-${messageId}`);
+            if (reactionsDiv) {
+              // Check if I already reacted? Handling that optimistically is complex without local state.
+              // Simplified: Just increment count or append emoji locally for visual feedback
+              // We'll rely on server broadcast for perfect accuracy, but showing "..." or immediate update is good.
+              // Let's just optimistic increment.
+              let found = false;
+              for (let child of reactionsDiv.children) {
+                if (child.textContent.includes(emoji)) {
+                  const parts = child.textContent.split(' ');
+                  const count = parseInt(parts[1]) + 1;
+                  child.textContent = `${emoji} ${count}`;
+                  found = true;
+                  break;
+                }
+              }
+              if (!found) {
+                const span = document.createElement('span');
+                span.className = 'reaction';
+                span.textContent = `${emoji} 1`;
+                reactionsDiv.appendChild(span);
+              }
+            }
+
             socket.emit('react', { message_id: messageId, emoji });
+          } else {
+            console.error("Socket not connected!");
+            alert("Connection error: please refresh");
           }
-          emojiPicker.style.display = 'none';
+          emojiPicker.style.display = 'none'; // Close after select
         };
         emojiPicker.appendChild(span);
       });
 
+      // SMART POSITIONING LOGIC
       const rect = msgElement.getBoundingClientRect();
-      let left = rect.left + window.scrollX;
-      let top = rect.top + window.scrollY - 80;
+      const pickerHeight = 200; // Approx height
+      const pickerWidth = 250;  // Approx width
 
-      if (left + 200 > window.innerWidth) {
-        left = window.innerWidth - 210;
+      let left = rect.left;
+      let top = rect.bottom + 5; // Default: below message
+
+      // Check vertical overflow (bottom)
+      if (top + pickerHeight > window.innerHeight) {
+        top = rect.top - pickerHeight - 5; // Position above if no space below
       }
+
+      // Check horizontal overflow (right)
+      if (left + pickerWidth > window.innerWidth) {
+        left = window.innerWidth - pickerWidth - 10; // Shift left if off screen
+      }
+
+      // Ensure not off-top (if message is very high up and we moved picker above)
       if (top < 0) {
-        top = rect.bottom + window.scrollY + 10;
+        top = 10; // Force sticky to top
       }
 
       emojiPicker.style.left = `${left}px`;
       emojiPicker.style.top = `${top}px`;
-      emojiPicker.style.display = 'grid';
+      emojiPicker.style.display = 'grid'; // Make visible
 
-      const handleClickOutside = (e) => {
-        if (!emojiPicker.contains(e.target)) {
+      // One-time click outside listener
+      const closePicker = (evt) => {
+        if (!emojiPicker.contains(evt.target)) {
           emojiPicker.style.display = 'none';
-          document.removeEventListener('click', handleClickOutside);
+          document.removeEventListener('click', closePicker);
         }
       };
-
-      document.addEventListener('click', handleClickOutside);
+      setTimeout(() => document.addEventListener('click', closePicker), 0);
     }
+
+
 
     function scrollToBottom() {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -968,4 +1714,5 @@ const API_BASE = 'https://abarg.up.railway.app';
     }
   </script>
 </body>
+
 </html>

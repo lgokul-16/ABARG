@@ -6,16 +6,13 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'supersecret123')
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///ultimatum.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Critical for Supabase stability on Railway
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": 280,
-        "connect_args": {
-            "connect_timeout": 10
-        }
     }
 
     # Mail & Supabase
@@ -27,4 +24,6 @@ class Config:
     MAIL_DEFAULT_SENDER = os.environ.get('EMAIL_USERNAME')
 
     SUPABASE_URL = os.environ.get('SUPABASE_URL')
+    if SUPABASE_URL and not SUPABASE_URL.endswith('/'):
+        SUPABASE_URL += '/'
     SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')

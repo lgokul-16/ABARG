@@ -13,6 +13,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     is_verified = db.Column(db.Boolean, default=False)
     profile_image = db.Column(db.String(255), nullable=True)
+    description = db.Column(db.String(255), nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -36,6 +37,15 @@ class EmailOTP(db.Model):
         db.session.commit()
         return otp
 
+    @staticmethod
+    def verify_otp(email, otp):
+        otp_record = EmailOTP.query.filter_by(email=email, otp=otp).first()
+        if otp_record and otp_record.expires_at > datetime.utcnow():
+            db.session.delete(otp_record)
+            db.session.commit()
+            return True
+        return False
+
 class FriendRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     from_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -57,17 +67,21 @@ class Participant(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    custom_profile_image = db.Column(db.String(255), nullable=True)
 
 class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    image_url = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class GroupMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    role = db.Column(db.String(20), default='member')  # 'admin', 'member'
+    custom_profile_image = db.Column(db.String(255), nullable=True)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Message(db.Model):
@@ -78,6 +92,7 @@ class Message(db.Model):
     content = db.Column(db.Text, nullable=True)
     image_url = db.Column(db.String(255), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=True)
 
 class Reaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -85,3 +100,5 @@ class Reaction(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     emoji = db.Column(db.String(10), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('message_id', 'user_id', name='_user_message_uc'),)
