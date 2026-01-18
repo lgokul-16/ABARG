@@ -837,9 +837,15 @@
       const email = document.getElementById('regEmail').value;
       const password = document.getElementById('regPassword').value;
       try {
-        await api('/register', { method: 'POST', body: JSON.stringify({ username, email, password }) });
-        alert('Registration successful! Check your email for OTP.');
-        showOTP();
+        const data = await api('/register', { method: 'POST', body: JSON.stringify({ username, email, password }) });
+
+        if (data.msg && data.msg.includes('verified automatically')) {
+          alert('Registration successful! You have been verified automatically.');
+          showLogin();
+        } else {
+          alert('Registration successful! Check your email for OTP.');
+          showOTP();
+        }
       } catch (e) {
         alert('Error: ' + e.message);
       }
