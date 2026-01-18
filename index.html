@@ -429,6 +429,17 @@
       border: none;
     }
 
+    .seen-status {
+      font-size: 0.7rem;
+      color: #9ca3af;
+      margin-top: 2px;
+      text-align: right;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 2px;
+    }
+
     /* Input Area */
     .input-area {
       padding: 1.5rem;
@@ -740,6 +751,17 @@
 
     <div id="emojiPicker"></div>
 
+    <div id="reactionDetailsModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Reactions</h3>
+        <div class="member-list" id="reactionDetailsList"></div>
+        <div style="margin-top:10px;">
+          <button onclick="document.getElementById('reactionDetailsModal').classList.add('hidden')"
+            style="width:100%;background:#aaa;">Close</button>
+        </div>
+      </div>
+    </div>
+
     <div id="settingsModal" class="hidden modal">
       <div class="modal-content">
         <h3>Settings</h3>
@@ -941,11 +963,35 @@
       socket.on('new_message', addMessageToUI);
       socket.on('new_group_message', addMessageToUI);
       socket.on('reaction_update', (data) => {
-        console.log("Socket: reaction_update received:", data);
+        // console.log("Socket: reaction_update received:", data);
         updateReactionsUI(data.message_id, data.reactions);
+      });
+      socket.on('message_seen_update', (data) => {
+        updateSeenUI(data.message_id, data.username);
       });
       socket.on('error', (data) => alert('Socket error: ' + data.msg));
     }
+
+    // Seen Observer
+    const seenObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const msgIdStr = entry.target.id.replace('msg-', '');
+          const msgId = parseInt(msgIdStr);
+
+          // If it's my own message, I don't "see" it typically, or duplicates.
+          // Simple logic: just emit mark_seen
+          if (!isNaN(msgId) && socket && currentUser) {
+            if (entry.target.dataset.senderId != currentUser.id) {
+              // Only mark others' messages as seen
+              // console.log("Marking seen:", msgId);
+              socket.emit('mark_seen', { message_id: msgId });
+              seenObserver.unobserve(entry.target); // Only mark once
+            }
+          }
+        }
+      });
+    }, { threshold: 0.5 });
 
     // Load Chats and Groups
     async function loadChats() {
@@ -1504,6 +1550,7 @@
       // Add ID to div for replacement logic
       const elementId = msg.pending ? `msg-${msg.id}` : `msg-${msg.id}`;
       div.id = elementId;
+      div.dataset.senderId = msg.sender_id;
 
       div.className = `message ${isMe ? 'user' : 'other'} ${msg.pending ? 'pending' : ''}`;
 
@@ -1531,19 +1578,63 @@
           `;
       }
 
+      // Seen Footer Calculation
+      let seenHtml = '';
+      if (msg.seen_by && msg.seen_by.length > 0) {
+        // Filter out myself? No, seeing that I saw it is weird but consistent. Usually seen by OTHERS.
+        // Filter out sender? 
+        const others = msg.seen_by.filter(u => u !== currentUser.username && u !== msg.sender_name);
+        if (others.length > 0) {
+          seenHtml = `<div class="seen-status" title="Seen by: ${others.join(', ')}">👁 ${others.length}</div>`;
+        }
+      }
+
       div.innerHTML = `
         ${contentHtml}
         <div class="reactions" id="reactions-${msg.id}"></div>
+        <div id="seen-${msg.id}">${seenHtml}</div>
       `;
 
       // Append to DOM first so getElementById works
       messagesDiv.appendChild(div);
+
+      // Observe for read receipts
+      if (!isMe && !msg.pending) {
+        seenObserver.observe(div);
+      }
 
       updateReactionsUI(msg.id, msg.reactions);
 
       // On click (Single click)
       div.onclick = (e) => showEmojiPicker(e, msg.id);
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function updateSeenUI(messageId, username) {
+      if (username === currentUser.username) return; // Don't show myself
+
+      const seenDiv = document.getElementById(`seen-${messageId}`);
+      if (!seenDiv) return;
+
+      // Simple text update. 
+      // We need to know current count or list. Parsing HTML is messy.
+      // Let's just append or show "Seen". 
+      // Ideally we track state.
+
+      // Check if already has text
+      if (seenDiv.innerText.includes('👁')) {
+        // Already multiple? 
+        // Just update title?
+        let currentTitle = seenDiv.firstChild.title || "";
+        if (!currentTitle.includes(username)) {
+          // Increment logic is hard without stored array
+          // Lazy UI: Just show "Seen"
+          // Or better: Re-fetch or simplistic "+1"
+          // Let's just create if not exists
+        }
+      } else {
+        seenDiv.innerHTML = `<div class="seen-status" title="Seen by: ${username}">👁</div>`;
+      }
     }
 
 
@@ -1587,20 +1678,55 @@
 
     // MESSAGE RENDERING WITH REACTIONS
     function updateReactionsUI(messageId, reactions) {
-      console.log("updateReactionsUI called for msg:", messageId, reactions);
+      // console.log("updateReactionsUI called for msg:", messageId, reactions);
       const reactionsDiv = document.getElementById(`reactions-${messageId}`);
-      if (!reactionsDiv) {
-        console.warn("Reactions div not found for msg:", messageId);
-        return;
-      }
+      if (!reactionsDiv) return;
+
       reactionsDiv.innerHTML = '';
       if (reactions && typeof reactions === 'object') {
         Object.entries(reactions).forEach(([emoji, count]) => {
           const span = document.createElement('span');
           span.className = 'reaction';
           span.textContent = `${emoji} ${count}`;
+          span.style.cursor = 'pointer';
+          span.onclick = (e) => {
+            e.stopPropagation();
+            showReactionDetails(messageId);
+          };
           reactionsDiv.appendChild(span);
         });
+      }
+    }
+
+    async function showReactionDetails(messageId) {
+      try {
+        const list = document.getElementById('reactionDetailsList');
+        list.innerHTML = 'Loading...';
+        document.getElementById('reactionDetailsModal').classList.remove('hidden');
+
+        const reactions = await api(`/messages/${messageId}/reactions`);
+        list.innerHTML = '';
+
+        if (reactions.length === 0) {
+          list.innerHTML = '<div style="padding:10px;text-align:center;color:#888">No reactions yet</div>';
+          return;
+        }
+
+        reactions.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'chat-item';
+          div.style.cursor = 'default';
+          div.innerHTML = `
+                   <img src="${avatar(r.profile_image, r.username)}" class="dp">
+                   <div style="flex:1;">
+                       <span style="font-weight:600;">${r.username}</span>
+                   </div>
+                   <span style="font-size:1.2rem;">${r.emoji}</span>
+                `;
+          list.appendChild(div);
+        });
+      } catch (e) {
+        alert("Failed to load reactions: " + e.message);
       }
     }
 

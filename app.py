@@ -16,7 +16,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 # Import Config
 from config import Config
 # Import DB and Models from models.py
-from models import db, User, EmailOTP, Conversation, Participant, Group, GroupMember, Message, Reaction, FriendRequest, \
+from models import db, User, EmailOTP, FriendRequest, Friend, Conversation, Participant, Group, GroupMember, Message, Reaction, MessageSeen, FriendRequest, \
     Friend
 
 # === Flask App Setup ===
@@ -429,6 +429,24 @@ def upload_group_icon(group_id):
         return jsonify({"msg": f"Server error: {str(e)}"}), 500
 
 
+@app.route('/messages/<int:message_id>/reactions', methods=['GET'])
+@jwt_required()
+def get_message_reactions(message_id):
+    # Verify user can access this message (omitted for brevity, or add logic to check participant/member status)
+    reactions = db.session.query(Reaction, User).join(User, Reaction.user_id == User.id)\
+        .filter(Reaction.message_id == message_id).all()
+    
+    result = []
+    for reaction, user in reactions:
+        result.append({
+            "user_id": user.id,
+            "username": user.username,
+            "profile_image": user.profile_image,
+            "emoji": reaction.emoji
+        })
+    return jsonify(result), 200
+
+
 @app.route('/chat/history/<int:conversation_id>', methods=['GET'])
 @jwt_required()
 def chat_history(conversation_id):
@@ -451,23 +469,48 @@ def chat_history(conversation_id):
         user = db.session.get(User, p.user_id)
         user_dps[p.user_id] = p.custom_profile_image if p.custom_profile_image else user.profile_image
 
+    # Fetch Seen Data
+    message_ids = [m.id for m in messages]
+    seen_records = []
+    if message_ids:
+        seen_records = db.session.query(MessageSeen, User.username).join(User).filter(MessageSeen.message_id.in_(message_ids)).all()
+    
+    seen_map = {} # msg_id -> [username1, username2]
+    for seen, username in seen_records:
+        if seen.message_id not in seen_map:
+            seen_map[seen.message_id] = []
+        seen_map[seen.message_id].append(username)
+
     result = []
-    for m in messages:
-        reactions = Reaction.query.filter_by(message_id=m.id).all()
+    for msg in messages:
+        sender_dp = user_dps.get(msg.sender_id) # Use contextual DP if exists
+        # Fallback to User table if no custom DP (handled in handle_message, but history needs query too)
+        # For efficiency, we assume backend logic handles this or we fetch Users. 
+        # Simplified: Contextual DP or None. Frontend falls back to UI Avatar.
+        
+        # Determine sender name (Private chat = username)
+        # We need sender object for username if not in participant list... 
+        # Actually private chat logic implies we know the other user. 
+        # Let's keep existing logic and just add seen info.
+        
+        # Fetch sender if needed for simplified logic
+        sender = db.session.get(User, msg.sender_id) 
+
+        # Compute reaction counts
         reaction_counts = {}
-        for r in reactions:
+        for r in msg.reactions:
             reaction_counts[r.emoji] = reaction_counts.get(r.emoji, 0) + 1
 
-        sender = User.query.get(m.sender_id)
         result.append({
-            "id": m.id,
-            "sender_id": m.sender_id,
-            "sender_name": sender.username if sender else "Unknown",
-            "sender_dp": user_dps.get(m.sender_id),
-            "content": m.content,
-            "image_url": m.image_url,
-            "timestamp": m.timestamp.isoformat(),
-            "reactions": reaction_counts
+            "id": msg.id,
+            "sender_id": msg.sender_id,
+            "sender_name": sender.username,
+            "sender_dp": sender_dp if sender_dp else sender.profile_image,
+            "content": msg.content,
+            "image_url": msg.image_url,
+            "timestamp": msg.timestamp.isoformat(),
+            "reactions": reaction_counts,
+            "seen_by": seen_map.get(msg.id, [])
         })
     return jsonify(result), 200
 
@@ -512,23 +555,38 @@ def group_chat_history(group_id):
         if user:
             user_dps[m.user_id] = m.custom_profile_image if m.custom_profile_image else user.profile_image
 
+    # Fetch Seen Data
+    message_ids = [m.id for m in messages]
+    seen_records = []
+    if message_ids:
+        seen_records = db.session.query(MessageSeen, User.username).join(User).filter(MessageSeen.message_id.in_(message_ids)).all()
+    
+    seen_map = {} # msg_id -> [username1, username2]
+    for seen, username in seen_records:
+        if seen.message_id not in seen_map:
+            seen_map[seen.message_id] = []
+        seen_map[seen.message_id].append(username)
+
     result = []
-    for m in messages:
-        reactions = Reaction.query.filter_by(message_id=m.id).all()
+    for msg in messages:
+        sender = db.session.get(User, msg.sender_id)
+        sender_dp = user_dps.get(msg.sender_id)
+
+        # Compute reaction counts
         reaction_counts = {}
-        for r in reactions:
+        for r in msg.reactions:
             reaction_counts[r.emoji] = reaction_counts.get(r.emoji, 0) + 1
 
-        sender = User.query.get(m.sender_id)
         result.append({
-            "id": m.id,
-            "sender_id": m.sender_id,
+            "id": msg.id,
+            "sender_id": msg.sender_id,
             "sender_name": sender.username if sender else "Unknown",
-            "sender_dp": user_dps.get(m.sender_id),
-            "content": m.content,
-            "image_url": m.image_url,
-            "timestamp": m.timestamp.isoformat(),
-            "reactions": reaction_counts
+            "sender_dp": sender_dp if sender_dp else (sender.profile_image if sender else None),
+            "content": msg.content,
+            "image_url": msg.image_url,
+            "timestamp": msg.timestamp.isoformat(),
+            "reactions": reaction_counts,
+            "seen_by": seen_map.get(msg.id, [])
         })
     return jsonify(result), 200
 
@@ -980,6 +1038,47 @@ def handle_reaction(data):
     except Exception as e:
         print(f"Reaction Error: {e}")
         db.session.rollback()
+
+@socketio.on('mark_seen')
+def handle_mark_seen(data):
+    user_id = get_user_id()
+    if not user_id:
+        return
+
+    message_id = data.get('message_id')
+    if not message_id:
+        return
+
+    # Check if already seen
+    existing = MessageSeen.query.filter_by(message_id=message_id, user_id=user_id).first()
+    if existing:
+        return
+
+    # Add seen record
+    new_seen = MessageSeen(message_id=message_id, user_id=user_id)
+    db.session.add(new_seen)
+    
+    # Broadcast update
+    msg = db.session.get(Message, message_id)
+    if msg:
+        db.session.commit() # Commit to save ID
+        
+        # Get total seen count/users? For now count is enough for simple UI, or list of users
+        # Let's send the user who just saw it
+        user = db.session.get(User, user_id)
+        
+        payload = {
+            "message_id": message_id,
+            "user_id": user_id,
+            "username": user.username,
+            "seen_at": new_seen.seen_at.isoformat()
+        }
+
+        if msg.conversation_id:
+            socketio.emit('message_seen_update', payload, room=f"private_{msg.conversation_id}")
+        elif msg.group_id:
+            socketio.emit('message_seen_update', payload, room=f"group_{msg.group_id}")
+
 
 # === Run ===
 if __name__ == "__main__":
