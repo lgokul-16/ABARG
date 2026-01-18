@@ -62,6 +62,8 @@ class Friend(db.Model):
 class Conversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    participants = db.relationship('Participant', backref='conversation', cascade='all, delete-orphan')
+    messages = db.relationship('Message', backref='conversation', cascade='all, delete-orphan')
 
 class Participant(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -75,6 +77,8 @@ class Group(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     image_url = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    members = db.relationship('GroupMember', backref='group', cascade='all, delete-orphan')
+    messages = db.relationship('Message', backref='group', cascade='all, delete-orphan')
 
 class GroupMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -93,6 +97,7 @@ class Message(db.Model):
     image_url = db.Column(db.String(255), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=True)
+    reactions = db.relationship('Reaction', backref='message', cascade='all, delete-orphan')
 
 class Reaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
