@@ -521,6 +521,24 @@
       border: none;
     }
 
+    .seen-container {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 2px;
+    }
+
+    .seen-status {
+      padding: 2px 6px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .seen-status:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
     /* Input Area */
     .input-area {
       padding: 24px;
@@ -602,6 +620,26 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
       border-radius: 20px;
+      position: fixed;
+      /* Changed from default (likely absolute) to fixed */
+      z-index: 10000;
+      /* High z-index to stay on top */
+      display: none;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      padding: 15px;
+      width: 250px;
+    }
+
+    .emoji {
+      font-size: 1.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+
+    .emoji:hover {
+      transform: scale(1.2);
     }
 
     .member-item {
@@ -1755,11 +1793,25 @@
         ${contentHtml}
         ${timeHtml}
         <div class="reactions" id="reactions-${msg.id}"></div>
-        <div id="seen-${msg.id}">${seenHtml}</div>
+        <div class="seen-container" id="seen-${msg.id}"></div>
       `;
 
-      // Append to DOM first so getElementById works
+      // Append to DOM first
       messagesDiv.appendChild(div);
+
+      // Add Seen Icon if Me
+      if (isMe) {
+        const seenContainer = document.getElementById(`seen-${msg.id}`);
+        const eyeBtn = document.createElement('div');
+        eyeBtn.className = 'seen-status clickable';
+        eyeBtn.innerHTML = '<span style="font-size:1.1rem;">👁</span>';
+        eyeBtn.onclick = (e) => {
+          e.stopPropagation(); // CRITICAL: Stop bubbling to message click
+          console.log('Eye clicked', msg.id);
+          showSeenDetails(msg.id);
+        };
+        seenContainer.appendChild(eyeBtn);
+      }
 
       // Observe for read receipts - ONLY if it's NOT my message
       if (!isMe && !msg.pending) {
@@ -1768,18 +1820,17 @@
 
       updateReactionsUI(msg.id, msg.reactions);
 
-      // On click (Single click)
-      div.onclick = (e) => showEmojiPicker(e, msg.id);
+      // On click (Single click) on the bubble itself
+      div.onclick = (e) => {
+        // Double check target is not reaction or eye (though stopPropagation should handle it)
+        if (e.target.closest('.reaction') || e.target.closest('.seen-status')) return;
+        showEmojiPicker(e, msg.id);
+      };
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
     function updateSeenUI(messageId, username) {
-      // Real-time update: minimal visual change, maybe just Ensure eye is there?
-      // Since we fetch on click, we don't strictly need to update the DOM text 
-      // unless we showed a counter. 
-      // For now, no-op is fine or a small toast?
-      // Let's just log it or maybe add a visual 'pulse' if we wanted.
-      // For simplicity requested: just rely on the click.
+      // Real-time update logic if needed
     }
 
 

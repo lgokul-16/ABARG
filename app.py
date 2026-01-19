@@ -67,47 +67,90 @@ def send_otp_email(email, otp):
         print(f"❌ Email failed: {str(e)}")
 
 
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+import io
+
+# Google Drive Constants
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
+SERVICE_ACCOUNT_FILE = 'service_account.json'
+DRIVE_FOLDER_ID = '18VjW4M2JE_9KIO4RnvN0Hf_AutMu5u_3'
+
 def upload_file_helper(file, subfolder="uploads"):
     """
-    Attempts to upload to Supabase. Falls back to local storage on failure.
-    Returns the public URL.
+    Uploads file to Google Drive using Service Account.
+    Returns a publicly accessible link.
     """
     filename = secure_filename(file.filename)
-    new_filename = f"{uuid.uuid4().hex}_{filename}"
-    
-    # ensure local folder exists
-    local_folder = app.config['UPLOAD_FOLDER']
-    if not os.path.exists(local_folder):
-        os.makedirs(local_folder)
+    # new_filename = f"{uuid.uuid4().hex}_{filename}" # Drive handles IDs, but we can keep name
 
     try:
-        # Try Supabase
-        # Supabase path often has no leading slash for 'upload', but bucket is 'uploads'
-        path_on_supa = new_filename
-        
-        file_content = file.read()
-        file.seek(0) # Reset for local save if needed
+        # Authenticate
+        if os.environ.get('GOOGLE_CREDENTIALS'):
+            # Load from ENV Variable (Best for Cloud)
+            import json
+            service_account_info = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
+            creds = service_account.Credentials.from_service_account_info(
+                service_account_info, scopes=SCOPES)
+        elif os.path.exists(SERVICE_ACCOUNT_FILE):
+             # Load from File (Best for Local / Direct Upload)
+            creds = service_account.Credentials.from_service_account_file(
+                SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+        else:
+            raise Exception("No Google Credentials found (Env or File)")
 
-        supabase.storage.from_("uploads").upload(
-            path=path_on_supa,
-            file=file_content,
-            file_options={"content-type": file.mimetype}
-        )
-        
-        # Construct URL
-        # Ensure trailing slash logic in config doesn't double slash if already correct,
-        # but supabase_url usually is base. 
-        # Easier: use get_public_url if available or manual construction
-        # Manual construction seems consistent with existing code
-        supa_url = app.config['SUPABASE_URL'].rstrip('/')
-        url = f"{supa_url}/storage/v1/object/public/uploads/{path_on_supa}"
-        return url
+        service = build('drive', 'v3', credentials=creds)
 
+        # Prepare File Metadata
+        file_metadata = {
+            'name': filename,
+            'parents': [DRIVE_FOLDER_ID]
+        }
+
+        # Prepare Content
+        # file is a FileStorage object from Flask
+        media = MediaIoBaseUpload(file.stream, mimetype=file.mimetype, resumable=True)
+
+        # Upload
+        print(f"🚀 Uploading {filename} to Google Drive...")
+        file_drive = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id, webContentLink, webViewLink'
+        ).execute()
+
+        file_id = file_drive.get('id')
+        print(f"✅ Uploaded to Drive. ID: {file_id}")
+
+        # Make Public (Anyone with link)
+        permission = {
+            'type': 'anyone',
+            'role': 'reader',
+        }
+        service.permissions().create(
+            fileId=file_id,
+            body=permission,
+            fields='id',
+        ).execute()
+
+        # Web Content Link
+        return f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
+        
     except Exception as e:
-        print(f"⚠️ Supabase Upload Failed ({str(e)}). Falling back to local storage.")
+        print(f"⚠️ Google Drive Upload Failed ({str(e)}). Falling back to local storage.")
+        import traceback
+        traceback.print_exc()
         
         # Fallback to local
-        file.seek(0)
+        if hasattr(file, 'stream'):
+            file.stream.seek(0) # Reset stream
+        
+        local_folder = app.config['UPLOAD_FOLDER']
+        if not os.path.exists(local_folder):
+            os.makedirs(local_folder)
+            
+        new_filename = f"{uuid.uuid4().hex}_{filename}"
         local_path = os.path.join(local_folder, new_filename)
         file.save(local_path)
         
