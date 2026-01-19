@@ -159,6 +159,7 @@ def upload_file_helper(file, subfolder="uploads"):
              
              
              # Returns local URL
+             from flask import url_for # Ensure import is available locally just in case
              web_view_link = url_for('uploaded_file', filename=unique_filename, _external=True)
              return {'file_id': unique_filename, 'web_view_link': web_view_link, 'thumbnail_link': web_view_link}
         except Exception as local_e:
