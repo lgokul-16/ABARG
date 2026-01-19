@@ -740,6 +740,73 @@ def demote_member(group_id):
     user_id = int(get_jwt_identity())
     target_id = request.json.get('user_id')
     
+    requester = GroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
+    if not requester or requester.role != 'admin':
+        return jsonify({"msg": "Admin privileges required"}), 403
+
+    target = GroupMember.query.filter_by(group_id=group_id, user_id=target_id).first()
+    if target:
+        target.role = 'member'
+        db.session.commit()
+        return jsonify({"msg": "Member demoted"}), 200
+    return jsonify({"msg": "Member not found"}), 404
+
+
+@app.route('/users/search', methods=['GET'])
+@jwt_required()
+def search_users():
+    query = request.args.get('q', '')
+    if not query or len(query) < 1:
+        return jsonify([])
+    
+    # Simple partial match
+    users = User.query.filter(User.username.ilike(f"%{query}%")).limit(10).all()
+    
+    # Exclude self? Maybe. Let's send basic info.
+    result = [{
+        "id": u.id,
+        "username": u.username,
+        "profile_image": u.profile_image
+    } for u in users]
+    
+    return jsonify(result), 200
+
+
+@app.route('/groups/<int:group_id>/add_member', methods=['POST'])
+@jwt_required()
+def add_group_member(group_id):
+    user_id = int(get_jwt_identity())
+    data = request.get_json()
+    new_member_id = data.get('user_id')
+
+    requester = GroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
+    if not requester or requester.role != 'admin':
+        return jsonify({"msg": "Only admins can add members"}), 403
+    
+    # Check if already member
+    existing = GroupMember.query.filter_by(group_id=group_id, user_id=new_member_id).first()
+    if existing:
+        return jsonify({"msg": "User is already a member"}), 400
+
+    # Verify friendship (Optional but good for privacy)
+    # For now, let's assume admins can add anyone they know? 
+    # Or strict: Admin must be friend with the user.
+    # Let's check friendship.
+    friendship = Friend.query.filter(
+        ((Friend.user_id == user_id) & (Friend.friend_id == new_member_id)) |
+        ((Friend.user_id == new_member_id) & (Friend.friend_id == user_id))
+    ).first()
+    
+    if not friendship:
+         return jsonify({"msg": "You can only add your friends"}), 400
+
+    new_member = GroupMember(group_id=group_id, user_id=new_member_id, role='member')
+    db.session.add(new_member)
+    db.session.commit()
+    
+    return jsonify({"msg": "Member added"}), 200
+    target_id = request.json.get('user_id')
+    
     group = Group.query.get(group_id)
     if group.created_by != user_id:
         return jsonify({"msg": "Only group creator can demote admins"}), 403

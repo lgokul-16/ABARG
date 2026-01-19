@@ -740,6 +740,99 @@
         padding: 0 10px;
       }
     }
+
+    /* New Search Results */
+    #searchResults {
+      position: absolute;
+      width: 100%;
+      background: var(--glass-panel-bg);
+      border: var(--glass-border);
+      border-radius: 12px;
+      margin-top: 5px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      display: none;
+    }
+
+    .search-result-item {
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .search-result-item:hover {
+      background: var(--item-hover-bg);
+    }
+
+    .search-result-item img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    /* Stylish Request Cards */
+    .request-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: var(--border-elegant);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: transform 0.2s;
+    }
+
+    .request-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+
+    /* DP Overlay */
+    .dp-container {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      margin-right: 16px;
+    }
+
+    .dp-container img {
+      width: 100%;
+      height: 100%;
+      border-radius: 24px;
+      object-fit: cover;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .dp-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+      cursor: pointer;
+    }
+
+    .dp-container:hover .dp-overlay {
+      opacity: 1;
+    }
+
+    .dp-overlay span {
+      font-size: 1.5rem;
+      color: white;
+    }
   </style>
 </head>
 
@@ -846,9 +939,13 @@
     <div id="addFriendModal" class="hidden modal">
       <div class="modal-content">
         <h3>Add Friend</h3>
-        <input type="text" id="friendUsername" placeholder="Enter username" style="width:100%;" />
+        <div style="position:relative;">
+          <input type="text" id="friendUsername" placeholder="Enter username..." style="width:100%; margin-bottom: 5px;"
+            oninput="searchUsers(this.value)" autocomplete="off" />
+          <div id="searchResults"></div>
+        </div>
         <div style="margin-top:20px; display: flex; gap: 10px;">
-          <button onclick="sendFriendRequest()" style="flex:1;">Send</button>
+          <button onclick="sendFriendRequest()" style="flex:1;">Send Request</button>
           <button onclick="hideAddFriend()" class="secondary-btn" style="flex:1;">Cancel</button>
         </div>
       </div>
@@ -872,8 +969,20 @@
       <div class="modal-content">
         <h3>Group Members</h3>
         <div class="member-list" id="groupMembersList"></div>
+        <div style="margin-top:20px; display:flex; gap:10px;">
+          <button id="addMemberBtn" onclick="showAddMemberModal()" style="flex:1;" class="hidden">Add Member</button>
+          <button onclick="hideGroupMembers()" class="secondary-btn" style="flex:1;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="addMemberModal" class="hidden modal" style="z-index: 1100;"> <!-- Higher z-index -->
+      <div class="modal-content">
+        <h3>Add Member</h3>
+        <div class="member-list" id="addMemberFriendList" style="max-height: 200px;"></div>
         <div style="margin-top:20px;">
-          <button onclick="hideGroupMembers()" class="secondary-btn" style="width:100%;">Close</button>
+          <button onclick="document.getElementById('addMemberModal').classList.add('hidden')" class="secondary-btn"
+            style="width:100%;">Cancel</button>
         </div>
       </div>
     </div>
@@ -907,12 +1016,14 @@
       <div class="modal-content">
         <h3>Settings</h3>
         <div style="display:flex;align-items:center;margin-bottom:20px;">
-          <img id="settingsDp" class="dp"
-            style="width:64px;height:64px;margin-right:16px;border-radius:24px;border:2px solid rgba(255,255,255,0.1);" />
+          <div class="dp-container" onclick="document.getElementById('settingsDpUpload').click()">
+            <img id="settingsDp" class="dp" src="https://ui-avatars.com/api/?name=User" />
+            <div class="dp-overlay"><span>📷</span></div>
+          </div>
           <div>
+            <h4 id="settingsUsernameDisplay" style="margin:0; font-size:1.2rem;">User</h4>
+            <span style="font-size:0.8rem; color:var(--text-muted);">Click image to change</span>
             <input type="file" id="settingsDpUpload" hidden onchange="uploadSettingsDP(this)" />
-            <button onclick="document.getElementById('settingsDpUpload').click()"
-              style="padding: 8px 16px; font-size: 0.9rem;">Change DP</button>
           </div>
         </div>
         <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Username</label>
@@ -1233,13 +1344,19 @@
           h4.style.padding = '10px 16px';
           h4.style.margin = '0';
           incomingRequests.appendChild(h4);
+
           requests.forEach(req => {
             const div = document.createElement('div');
-            div.style.padding = '8px';
+            div.className = 'request-card';
             div.innerHTML = `
-              ${req.username}
-              <button class="accept-btn" data-id="${req.request_id}" style="margin-left:5px;background:green;" onclick="acceptRequest(${req.request_id})">Accept</button>
-              <button class="reject-btn" data-id="${req.request_id}" style="margin-left:5px;background:red;" onclick="rejectRequest(${req.request_id})">Reject</button>
+               <div style="display:flex; align-items:center;">
+                   <img src="${avatar(null, req.username)}" class="dp" style="width:32px;height:32px;border-radius:50%;margin-right:10px;">
+                   <span style="font-weight:600;">${req.username}</span>
+               </div>
+               <div>
+                   <button onclick="acceptRequest(${req.request_id})" style="background:none; border:none; color:green; font-size:1.2rem; cursor:pointer; padding:5px;">✔</button>
+                   <button onclick="rejectRequest(${req.request_id})" style="background:none; border:none; color:red; font-size:1.2rem; cursor:pointer; padding:5px;">✖</button>
+               </div>
             `;
             incomingRequests.appendChild(div);
           });
@@ -1532,15 +1649,65 @@
       document.getElementById('groupMembersModal').classList.add('hidden');
     }
 
+    // Add Member Logic
+    async function showAddMemberModal() {
+      document.getElementById('addMemberModal').classList.remove('hidden');
+      const friends = await api('/friends');
+      const list = document.getElementById('addMemberFriendList');
+      list.innerHTML = '';
+
+      // Filter out existing members (Client-side optimization)
+      // Ideally we fetch members first, but we can do it inside the loop or fetch fresh
+      const members = await api(`/groups/${currentChatId}/members`);
+      const memberIds = new Set(members.map(m => m.id));
+
+      friends.forEach(friend => {
+        if (memberIds.has(friend.id)) return;
+
+        const div = document.createElement('div');
+        div.className = 'member-item';
+        div.style.display = 'flex';
+        div.style.justifyContent = 'space-between';
+        div.style.alignItems = 'center';
+        div.innerHTML = `
+                <span>${friend.username}</span>
+                <button onclick="addMemberToGroup(${friend.id})" style="padding:4px 10px; font-size:0.8rem;">Add</button>
+            `;
+        list.appendChild(div);
+      });
+
+      if (list.children.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:10px;">No friends to add</div>';
+      }
+    }
+
+    async function addMemberToGroup(userId) {
+      try {
+        await api(`/groups/${currentChatId}/add_member`, { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+        alert("Member added!");
+        document.getElementById('addMemberModal').classList.add('hidden');
+        loadGroupMembers(); // Refresh list
+      } catch (e) {
+        alert("Failed to add: " + e.message);
+      }
+    }
+
     async function loadGroupMembers() {
       try {
         const members = await api(`/groups/${currentChatId}/members`);
         const list = document.getElementById('groupMembersList');
         list.innerHTML = '';
 
-        // Find my role to determine if I can kick
+        // Find my role to determine if I can kick/add
         const myMember = members.find(m => m.id === currentUser.id);
         const myRole = myMember ? myMember.role : 'member';
+
+        // Show/Hide Add Button
+        if (myRole === 'admin') {
+          document.getElementById('addMemberBtn').classList.remove('hidden');
+        } else {
+          document.getElementById('addMemberBtn').classList.add('hidden');
+        }
 
         members.forEach(member => {
           const div = document.createElement('div');
@@ -1667,6 +1834,43 @@
     }
 
     // Messaging
+    let searchTimeout = null;
+    async function searchUsers(query) {
+      const resultsDiv = document.getElementById('searchResults');
+      if (!query || query.length < 1) {
+        resultsDiv.style.display = 'none';
+        return;
+      }
+
+      if (searchTimeout) clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(async () => {
+        try {
+          const results = await api(`/users/search?q=${encodeURIComponent(query)}`);
+          resultsDiv.innerHTML = '';
+          if (results.length > 0) {
+            resultsDiv.style.display = 'block';
+            results.forEach(user => {
+              const div = document.createElement('div');
+              div.className = 'search-result-item';
+              div.innerHTML = `
+                            <img src="${avatar(user.profile_image, user.username)}">
+                            <span>${user.username}</span>
+                        `;
+              div.onclick = () => {
+                document.getElementById('friendUsername').value = user.username;
+                resultsDiv.style.display = 'none';
+              };
+              resultsDiv.appendChild(div);
+            });
+          } else {
+            resultsDiv.style.display = 'none';
+          }
+        } catch (e) {
+          console.error("Search error", e);
+        }
+      }, 300); // 300ms debounce
+    }
+
     async function uploadImage(input) {
       const file = input.files[0];
       if (!file) return;
