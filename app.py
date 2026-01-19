@@ -87,7 +87,15 @@ def upload_file_helper(file, subfolder="uploads"):
 
     try:
         # Authenticate
-        if os.environ.get('GOOGLE_CREDENTIALS'):
+        creds = None
+        
+        # PRIORITY: User Credentials (for Quota)
+        if os.path.exists('user_creds.json'):
+            from google.oauth2.credentials import Credentials
+            creds = Credentials.from_authorized_user_file('user_creds.json', SCOPES)
+            print("Using User Credentials (user_creds.json)")
+            
+        elif os.environ.get('GOOGLE_CREDENTIALS'):
             # Load from ENV Variable (Best for Cloud)
             import json
             service_account_info = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
@@ -139,8 +147,23 @@ def upload_file_helper(file, subfolder="uploads"):
         
     except Exception as e:
         print(f"⚠️ Google Drive Upload Failed ({str(e)}). Falling back to local storage.")
-        import traceback
-        traceback.print_exc()
+        try:
+             # Fallback to local
+             # Reset file pointer to 0 because Drive upload might have read it
+             file.seek(0)
+             
+             filename = secure_filename(file.filename)
+             unique_filename = f"{uuid.uuid4().hex}_{filename}"
+             file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+             file.save(file_path)
+             
+             
+             # Returns local URL
+             web_view_link = url_for('uploaded_file', filename=unique_filename, _external=True)
+             return {'file_id': unique_filename, 'web_view_link': web_view_link, 'thumbnail_link': web_view_link}
+        except Exception as local_e:
+             print(f"❌ Local Save also failed: {local_e}")
+             return None
         
         # Fallback to local
         if hasattr(file, 'stream'):
