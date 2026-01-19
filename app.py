@@ -67,120 +67,60 @@ def send_otp_email(email, otp):
         print(f"❌ Email failed: {str(e)}")
 
 
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
-import io
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
-# Google Drive Constants
-SCOPES = ['https://www.googleapis.com/auth/drive']
-SERVICE_ACCOUNT_FILE = 'service_account.json'
-DRIVE_FOLDER_ID = '18VjW4M2JE_9KIO4RnvN0Hf_AutMu5u_3'
+# Cloudinary Config
+cloudinary.config(
+    cloud_name=Config.CLOUDINARY_CLOUD_NAME,
+    api_key=Config.CLOUDINARY_API_KEY,
+    api_secret=Config.CLOUDINARY_API_SECRET
+)
 
 def upload_file_helper(file, subfolder="uploads"):
     """
-    Uploads file to Google Drive using Service Account.
-    Returns a publicly accessible link.
+    Uploads file to Cloudinary.
+    Returns a publicly accessible secure_url.
     """
-    filename = secure_filename(file.filename)
-    # new_filename = f"{uuid.uuid4().hex}_{filename}" # Drive handles IDs, but we can keep name
-
     try:
-        # Authenticate
-        creds = None
+        if not file:
+            return None
+
+        # Determine resource_type (auto detects image/video/raw)
+        upload_result = cloudinary.uploader.upload(
+            file, 
+            folder="abarg_chat", # Optional: Organize in a specific folder in Cloudinary
+            resource_type="auto"
+        )
         
-        # PRIORITY: User Credentials (for Quota)
-        if os.path.exists('user_creds.json'):
-            from google.oauth2.credentials import Credentials
-            creds = Credentials.from_authorized_user_file('user_creds.json', SCOPES)
-            print("Using User Credentials (user_creds.json)")
-            
-        elif os.environ.get('GOOGLE_CREDENTIALS'):
-            # Load from ENV Variable (Best for Cloud)
-            import json
-            service_account_info = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
-            creds = service_account.Credentials.from_service_account_info(
-                service_account_info, scopes=SCOPES)
-        elif os.path.exists(SERVICE_ACCOUNT_FILE):
-             # Load from File (Best for Local / Direct Upload)
-            creds = service_account.Credentials.from_service_account_file(
-                SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-        else:
-            raise Exception("No Google Credentials found (Env or File)")
+        # Get the URL
+        secure_url = upload_result.get('secure_url')
+        print(f"✅ Uploaded to Cloudinary: {secure_url}")
+        return secure_url
 
-        service = build('drive', 'v3', credentials=creds)
-
-        # Prepare File Metadata
-        file_metadata = {
-            'name': filename,
-            'parents': [DRIVE_FOLDER_ID]
-        }
-
-        # Prepare Content
-        # file is a FileStorage object from Flask
-        media = MediaIoBaseUpload(file.stream, mimetype=file.mimetype, resumable=True)
-
-        # Upload
-        print(f"🚀 Uploading {filename} to Google Drive...")
-        file_drive = service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id, webContentLink, webViewLink'
-        ).execute()
-
-        file_id = file_drive.get('id')
-        print(f"✅ Uploaded to Drive. ID: {file_id}")
-
-        # Make Public (Anyone with link)
-        permission = {
-            'type': 'anyone',
-            'role': 'reader',
-        }
-        service.permissions().create(
-            fileId=file_id,
-            body=permission,
-            fields='id',
-        ).execute()
-
-        # Web Content Link
-        return f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
-        
     except Exception as e:
-        print(f"⚠️ Google Drive Upload Failed ({str(e)}). Falling back to local storage.")
+        print(f"⚠️ Cloudinary Upload Failed ({str(e)}). Falling back to local storage.")
         try:
              # Fallback to local
-             # Reset file pointer to 0 because Drive upload might have read it
+             # Reset file pointer to 0 because Cloudinary upload might have read it
              file.seek(0)
              
              filename = secure_filename(file.filename)
              unique_filename = f"{uuid.uuid4().hex}_{filename}"
              file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+             
+             if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                 os.makedirs(app.config['UPLOAD_FOLDER'])
+
              file.save(file_path)
              
-             
              # Returns local URL
-             from flask import url_for # Ensure import is available locally just in case
-             web_view_link = url_for('uploaded_file', filename=unique_filename, _external=True)
-             return {'file_id': unique_filename, 'web_view_link': web_view_link, 'thumbnail_link': web_view_link}
+             from flask import url_for
+             return url_for('uploaded_file', filename=unique_filename, _external=True)
         except Exception as local_e:
              print(f"❌ Local Save also failed: {local_e}")
              return None
-        
-        # Fallback to local
-        if hasattr(file, 'stream'):
-            file.stream.seek(0) # Reset stream
-        
-        local_folder = app.config['UPLOAD_FOLDER']
-        if not os.path.exists(local_folder):
-            os.makedirs(local_folder)
-            
-        new_filename = f"{uuid.uuid4().hex}_{filename}"
-        local_path = os.path.join(local_folder, new_filename)
-        file.save(local_path)
-        
-        # Generate local URL
-        from flask import url_for
-        return url_for('uploaded_file', filename=new_filename, _external=True)
 
 
 # === Routes ===

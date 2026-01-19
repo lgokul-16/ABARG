@@ -30,3 +30,8 @@ class Config:
     if SUPABASE_URL and not SUPABASE_URL.endswith('/'):
         SUPABASE_URL += '/'
     SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    # Cloudinary
+    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
+    CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
+    CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET')
