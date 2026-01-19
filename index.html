@@ -615,6 +615,86 @@
     }
 
     /* Adjust specific text colors which might be hardcoded in HTML - Handled by class selection */
+
+    /* Mobile Responsiveness */
+    #mobileBackBtn {
+      display: none;
+      margin-right: 10px;
+      font-size: 1.2rem;
+      background: transparent;
+      color: var(--text-main);
+      padding: 5px;
+      border: none;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+        border: none;
+      }
+
+      .layout-wrapper {
+        position: relative;
+      }
+
+      /* By default on mobile, show sidebar, hide chat */
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        display: flex;
+      }
+
+      .main-chat {
+        display: none;
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        background: var(--glass-panel-bg);
+        /* Ensure opaque background */
+        z-index: 50;
+      }
+
+      /* Class to toggle view */
+      .show-chat .sidebar {
+        display: none;
+      }
+
+      .show-chat .main-chat {
+        display: flex;
+      }
+
+      #welcomeScreen {
+        display: none !important;
+      }
+
+      /* Don't show welcome on mobile, just list */
+
+      #mobileBackBtn {
+        display: block;
+      }
+
+      .app-header {
+        display: none;
+      }
+
+      /* Optional: hide main app header to save space? or keep it? Let's keep it but maybe smaller padding */
+      .app-header {
+        padding: 0.5rem 1rem;
+      }
+
+      .app-header span {
+        font-size: 1.2rem;
+      }
+
+      /* Adjust chat header */
+      .chat-header {
+        padding: 0 10px;
+      }
+    }
   </style>
 </head>
 
@@ -673,6 +753,7 @@
 
         <div id="chatArea" class="main-chat hidden">
           <div id="chatHeader" class="chat-header">
+            <button id="mobileBackBtn" onclick="backToSidebar()">←</button>
             <input type="file" id="dpUpload" hidden onchange="uploadDP(this)" />
             <button onclick="document.getElementById('dpUpload').click()">Change DP</button>
             <button id="staticChangeGroupDpBtn" class="hidden"
@@ -1196,6 +1277,15 @@
       }
     }
 
+    function backToSidebar() {
+      document.querySelector('.layout-wrapper').classList.remove('show-chat');
+      currentChatId = null; // Optional: deselect chat so returning resets state? Or keep state?
+      // Let's keep state but clear active view
+      // Actually good to clear currentChat so we stop listening? 
+      // For simple UI, just hiding is enough, but "Back" usually implies leaving the chat.
+      // Let's just toggle UI for now.
+    }
+
     // Chat Functions
     async function openPrivateChat(friendId, friendName, friendDp) {
       deleteChatBtn.classList.remove('hidden');
@@ -1206,6 +1296,8 @@
       document.getElementById('welcomeScreen').classList.add('hidden');
       chatArea.classList.remove('hidden');
 
+      // Mobile View Toggle
+      document.querySelector('.layout-wrapper').classList.add('show-chat');
 
       try {
         // Fetch full profile to get Description (since friend list might be stale or simple)
@@ -1267,6 +1359,9 @@
       // Hide Welcome, Show Chat
       document.getElementById('welcomeScreen').classList.add('hidden');
       chatArea.classList.remove('hidden');
+
+      // Mobile View Toggle
+      document.querySelector('.layout-wrapper').classList.add('show-chat');
 
 
       // Reset UI
