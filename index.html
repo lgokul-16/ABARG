@@ -9,33 +9,55 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
     :root {
-      /* Premium Dark/Glass Palette */
+      /* DEFAULT: Dark Mode */
       --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      --glass-bg: rgba(255, 255, 255, 0.03);
-      /* Deeper, more subtle glass */
+
+      --glass-panel-bg: rgba(30, 41, 59, 0.6);
+      --glass-header-bg: rgba(15, 23, 42, 0.8);
+      --glass-sidebar-bg: rgba(15, 23, 42, 0.4);
+      --glass-input-bg: rgba(0, 0, 0, 0.2);
+
       --glass-border: 1px solid rgba(255, 255, 255, 0.1);
       --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 
-      /* Accents */
       --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-      --accent-glow: 0 0 20px rgba(139, 92, 246, 0.3);
 
-      /* Text */
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --text-inverse: #ffffff;
 
-      /* UI Elements */
-      --radius-sm: 12px;
+      --border-elegant: 1px solid rgba(255, 255, 255, 0.1);
+
+      --msg-bg-other: rgba(255, 255, 255, 0.08);
+      --msg-bg-user: var(--primary-gradient);
+
+      --item-hover-bg: rgba(255, 255, 255, 0.05);
+
       --radius-md: 16px;
       --radius-lg: 24px;
       --radius-pill: 9999px;
+    }
 
-      /* Elegant Borders - Requested by user */
-      --border-elegant: 1px solid rgba(255, 255, 255, 0.1);
-      /* Subtle white for dark mode */
-      --border-active: 1px solid rgba(139, 92, 246, 0.5);
-      /* Purple accent */
+    body.light-mode {
+      /* Light Mode Overrides */
+      --bg-gradient: linear-gradient(120deg, #f0f4f8 0%, #d9e2ec 100%);
+
+      --glass-panel-bg: rgba(255, 255, 255, 0.75);
+      --glass-header-bg: rgba(255, 255, 255, 0.85);
+      --glass-sidebar-bg: rgba(255, 255, 255, 0.5);
+      --glass-input-bg: rgba(255, 255, 255, 0.8);
+
+      --glass-border: 1px solid rgba(0, 0, 0, 0.05);
+      --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --text-inverse: #ffffff;
+
+      --border-elegant: 1px solid rgba(0, 0, 0, 0.08);
+
+      --msg-bg-other: rgba(255, 255, 255, 0.9);
+      --item-hover-bg: rgba(0, 0, 0, 0.05);
     }
 
     * {
@@ -53,6 +75,7 @@
       justify-content: center;
       align-items: center;
       overflow: hidden;
+      transition: background 0.5s ease;
     }
 
     /* Scrollbar */
@@ -82,8 +105,7 @@
       max-width: 1400px;
       width: 95%;
       height: 92vh;
-      background: rgba(30, 41, 59, 0.6);
-      /* Semi-transparent dark based */
+      background: var(--glass-panel-bg);
       backdrop-filter: blur(25px);
       -webkit-backdrop-filter: blur(25px);
       border: var(--glass-border);
@@ -107,18 +129,36 @@
       transform: scale(0.96);
     }
 
+    .secondary-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      border: var(--border-elegant);
+      padding: 10px 20px;
+      /* Ensure good sizing */
+      border-radius: var(--radius-pill);
+    }
+
+    .secondary-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: var(--text-main);
+    }
+
     /* Inputs */
     input,
     select {
       padding: 14px 20px;
       border: var(--border-elegant);
-      background: rgba(0, 0, 0, 0.2);
-      /* Darker input bg */
+      background: var(--glass-input-bg);
       border-radius: var(--radius-pill);
       color: var(--text-main);
       transition: all 0.2s ease;
       outline: none;
       font-size: 0.95rem;
+    }
+
+    input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.7;
     }
 
     input:focus,
@@ -162,7 +202,7 @@
       display: flex;
       flex-direction: column;
       gap: 1.2rem;
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--glass-panel-bg);
       padding: 2rem;
       border-radius: var(--radius-lg);
       border: var(--glass-border);
@@ -171,6 +211,7 @@
     .auth-screen input {
       width: 100%;
       background: rgba(0, 0, 0, 0.3);
+      /* keep simplified for auth, or use var --glass-input-bg */
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
@@ -203,7 +244,7 @@
 
     /* App Header */
     .app-header {
-      background: rgba(15, 23, 42, 0.8);
+      background: var(--glass-header-bg);
       padding: 1rem 2rem;
       display: flex;
       justify-content: space-between;
@@ -224,7 +265,7 @@
 
     .app-header button {
       margin-left: 10px;
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--item-hover-bg);
       color: var(--text-main);
       padding: 10px 20px;
       border-radius: var(--radius-pill);
@@ -258,7 +299,7 @@
     /* Sidebar */
     .sidebar {
       width: 340px;
-      background: rgba(15, 23, 42, 0.4);
+      background: var(--glass-sidebar-bg);
       border-right: var(--border-elegant);
       display: flex;
       flex-direction: column;
@@ -303,7 +344,7 @@
     }
 
     .chat-item:hover {
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--item-hover-bg);
       border: var(--glass-border);
       transform: translateX(4px);
     }
@@ -330,8 +371,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      background: rgba(15, 23, 42, 0.2);
-      /* Slightly lighter than sidebar */
+      background: transparent;
       position: relative;
       min-width: 0;
     }
@@ -344,7 +384,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(15, 23, 42, 0.6);
+      background: var(--glass-header-bg);
       backdrop-filter: blur(10px);
     }
 
@@ -363,7 +403,7 @@
     }
 
     .chat-actions button {
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--item-hover-bg);
       padding: 10px;
       border-radius: 14px;
       width: 44px;
@@ -385,8 +425,9 @@
       padding: 30px;
       overflow-y: auto;
       /* Subtle dark pattern */
-      background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-image: radial-gradient(var(--text-muted) 1px, transparent 1px);
       background-size: 24px 24px;
+      opacity: 0.9;
     }
 
     .message {
@@ -416,7 +457,7 @@
 
     .message.user {
       align-self: flex-end;
-      background: var(--primary-gradient);
+      background: var(--msg-bg-user);
       color: white;
       border-bottom-right-radius: 4px;
       /* Distinctive shape */
@@ -426,11 +467,12 @@
 
     .message.other {
       align-self: flex-start;
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--msg-bg-other);
       /* Dark glass message */
       color: var(--text-main);
       border-bottom-left-radius: 4px;
       border: 1px solid rgba(255, 255, 255, 0.05);
+      /* keep subtle */
     }
 
     .message.pending {
@@ -482,7 +524,7 @@
     /* Input Area */
     .input-area {
       padding: 24px;
-      background: rgba(15, 23, 42, 0.6);
+      background: var(--glass-header-bg);
       border-top: var(--border-elegant);
       display: flex;
       align-items: center;
@@ -494,14 +536,14 @@
       flex: 1;
       padding: 16px 24px;
       border-radius: var(--radius-pill);
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--glass-input-bg);
       border: var(--border-elegant);
       font-size: 1rem;
-      color: white;
+      color: var(--text-main);
     }
 
     .input-area input::placeholder {
-      color: rgba(255, 255, 255, 0.3);
+      color: var(--text-muted);
     }
 
     .input-area button {
@@ -530,17 +572,15 @@
     }
 
     .modal-content {
-      background: #1e293b;
-      /* Solid dark for cleaner modal or keep refined glass */
-      background: rgba(30, 41, 59, 0.95);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--glass-panel-bg);
+      border: var(--glass-border);
       border-radius: 24px;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
       color: var(--text-main);
     }
 
     .modal-content h3 {
-      color: white;
+      color: var(--text-main);
       font-size: 1.8rem;
     }
 
@@ -561,11 +601,7 @@
       background: rgba(255, 255, 255, 0.05);
     }
 
-    /* Adjust specific text colors which might be hardcoded in HTML */
-    .app-header button,
-    .chat-header button {
-      /* Already handled by class selection */
-    }
+    /* Adjust specific text colors which might be hardcoded in HTML - Handled by class selection */
   </style>
 </head>
 
@@ -672,9 +708,9 @@
       <div class="modal-content">
         <h3>Add Friend</h3>
         <input type="text" id="friendUsername" placeholder="Enter username" style="width:100%;" />
-        <div style="margin-top:10px;">
-          <button onclick="sendFriendRequest()" style="width:48%;">Send</button>
-          <button onclick="hideAddFriend()" style="width:48%;background:#aaa;">Cancel</button>
+        <div style="margin-top:20px; display: flex; gap: 10px;">
+          <button onclick="sendFriendRequest()" style="flex:1;">Send</button>
+          <button onclick="hideAddFriend()" class="secondary-btn" style="flex:1;">Cancel</button>
         </div>
       </div>
     </div>
@@ -682,11 +718,13 @@
     <div id="createGroupModal" class="hidden modal">
       <div class="modal-content">
         <h3>Create Group</h3>
-        <input type="text" id="groupName" placeholder="Group name" style="width:100%;" />
-        <div class="member-list" id="friendSelectionList"></div>
-        <div style="margin-top:10px;">
-          <button onclick="createGroup()" style="width:48%;">Create</button>
-          <button onclick="hideCreateGroup()" style="width:48%;background:#aaa;">Cancel</button>
+        <input type="text" id="groupName" placeholder="Group name" style="width:100%; margin-bottom: 10px;" />
+        <label style="display:block; margin-bottom:5px; color:var(--text-muted); font-size:0.9rem;">Select
+          Friends:</label>
+        <div class="member-list" id="friendSelectionList" style="max-height: 200px; margin-bottom: 20px;"></div>
+        <div style="display: flex; gap: 10px;">
+          <button onclick="createGroup()" style="flex:1;">Create</button>
+          <button onclick="hideCreateGroup()" class="secondary-btn" style="flex:1;">Cancel</button>
         </div>
       </div>
     </div>
@@ -695,8 +733,8 @@
       <div class="modal-content">
         <h3>Group Members</h3>
         <div class="member-list" id="groupMembersList"></div>
-        <div style="margin-top:10px;">
-          <button onclick="hideGroupMembers()" style="width:100%;background:#aaa;">Close</button>
+        <div style="margin-top:20px;">
+          <button onclick="hideGroupMembers()" class="secondary-btn" style="width:100%;">Close</button>
         </div>
       </div>
     </div>
@@ -707,9 +745,9 @@
       <div class="modal-content">
         <h3>Reactions</h3>
         <div class="member-list" id="reactionDetailsList"></div>
-        <div style="margin-top:10px;">
+        <div style="margin-top:20px;">
           <button onclick="document.getElementById('reactionDetailsModal').classList.add('hidden')"
-            style="width:100%;background:#aaa;">Close</button>
+            class="secondary-btn" style="width:100%;">Close</button>
         </div>
       </div>
     </div>
@@ -718,9 +756,9 @@
       <div class="modal-content">
         <h3>Seen By</h3>
         <div class="member-list" id="seenDetailsList"></div>
-        <div style="margin-top:10px;">
-          <button onclick="document.getElementById('seenDetailsModal').classList.add('hidden')"
-            style="width:100%;background:#aaa;">Close</button>
+        <div style="margin-top:20px;">
+          <button onclick="document.getElementById('seenDetailsModal').classList.add('hidden')" class="secondary-btn"
+            style="width:100%;">Close</button>
         </div>
       </div>
     </div>
@@ -729,22 +767,32 @@
     <div id="settingsModal" class="hidden modal">
       <div class="modal-content">
         <h3>Settings</h3>
-        <div style="display:flex;align-items:center;margin-bottom:10px;">
-          <img id="settingsDp" class="dp" style="width:48px;height:48px;margin-right:10px;" />
+        <div style="display:flex;align-items:center;margin-bottom:20px;">
+          <img id="settingsDp" class="dp"
+            style="width:64px;height:64px;margin-right:16px;border-radius:24px;border:2px solid rgba(255,255,255,0.1);" />
           <div>
             <input type="file" id="settingsDpUpload" hidden onchange="uploadSettingsDP(this)" />
-            <button onclick="document.getElementById('settingsDpUpload').click()">Change DP</button>
+            <button onclick="document.getElementById('settingsDpUpload').click()"
+              style="padding: 8px 16px; font-size: 0.9rem;">Change DP</button>
           </div>
         </div>
-        <label>Username</label>
-        <input type="text" id="settingsUsername" disabled style="background:#f0f0f0;" />
-        <label>Email</label>
-        <input type="text" id="settingsEmail" disabled style="background:#f0f0f0;" />
-        <label>Description (About)</label>
-        <input type="text" id="settingsDescription" placeholder="Hey there! I am using ABARG." />
-        <div style="margin-top:10px;">
-          <button onclick="updateProfileDescription()">Save Description</button>
-          <button onclick="hideSettings()" style="width:100%;background:#aaa;margin-top:5px;">Close</button>
+        <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Username</label>
+        <input type="text" id="settingsUsername" disabled style="margin-bottom:15px; opacity:0.7;" />
+        <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Email</label>
+        <input type="text" id="settingsEmail" disabled style="margin-bottom:15px; opacity:0.7;" />
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <label style="color:var(--text-muted);">Appearance</label>
+          <button id="themeToggleBtn" onclick="toggleTheme()" style="width:auto; padding:6px 12px; font-size:0.9rem;">☀️
+            Light Mode</button>
+        </div>
+
+        <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Description (About)</label>
+        <input type="text" id="settingsDescription" placeholder="Hey there! I am using ABARG."
+          style="margin-bottom:20px;" />
+        <div style="display: flex; gap: 10px;">
+          <button onclick="updateProfileDescription()" style="flex:1;">Save Description</button>
+          <button onclick="hideSettings()" class="secondary-btn" style="flex:1;">Close</button>
         </div>
       </div>
     </div>
@@ -1281,6 +1329,7 @@
       document.getElementById('settingsEmail').value = currentUser.email;
       document.getElementById('settingsDescription').value = currentUser.description || '';
       document.getElementById('settingsDp').src = avatar(currentUser.profile_image, currentUser.username);
+      updateThemeBtn();
     }
 
     function hideSettings() {
@@ -1856,6 +1905,37 @@
     function scrollToBottom() {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
+
+    // Theme Logic
+    function toggleTheme() {
+      document.body.classList.toggle('light-mode');
+      const isLight = document.body.classList.contains('light-mode');
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      updateThemeBtn();
+    }
+
+    function updateThemeBtn() {
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) {
+        const isLight = document.body.classList.contains('light-mode');
+        btn.textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+        // Optional: Change button style based on theme?
+        btn.style.background = isLight ? '#0f172a' : 'var(--primary-gradient)';
+        btn.style.color = isLight ? 'white' : 'white';
+      }
+    }
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+      }
+      // Update button text on open settings, but we can just run it
+      // We'll call updateThemeBtn() when modal opens essentially.
+    }
+
+    // Initialize Theme immediately
+    initTheme();
 
     // Start
     if (localStorage.getItem('token')) {
