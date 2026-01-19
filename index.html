@@ -481,10 +481,15 @@
 
     .message img {
       max-width: 100%;
-      height: auto;
+      max-height: 250px;
+      /* Keep images compact */
+      width: auto;
+      object-fit: contain;
       border-radius: 12px;
       margin-top: 8px;
       border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      /* Indicate clickable */
     }
 
     .sender-name {
