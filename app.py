@@ -73,7 +73,7 @@ from googleapiclient.http import MediaIoBaseUpload
 import io
 
 # Google Drive Constants
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
+SCOPES = ['https://www.googleapis.com/auth/drive']
 SERVICE_ACCOUNT_FILE = 'service_account.json'
 DRIVE_FOLDER_ID = '18VjW4M2JE_9KIO4RnvN0Hf_AutMu5u_3'
 
