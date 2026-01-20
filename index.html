@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ABARG Chat</title>
+  <title>Alter</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
@@ -802,7 +802,21 @@
       }
 
       .app-header span {
-        font-size: 1.2rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-left: 10px;
+      }
+
+      .logo-container {
+        display: flex;
+        align-items: center;
+      }
+
+      .logo-container img {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
       }
 
       /* Adjust chat header */
@@ -910,7 +924,7 @@
   <div class="container">
     <!-- Auth Screens -->
     <div id="authScreen" class="auth-screen">
-      <h2>ABARG Chat</h2>
+      <h2>Alter</h2>
       <div id="registerForm">
         <h3>Register</h3>
         <input type="text" id="regUsername" placeholder="Username" />
@@ -938,7 +952,10 @@
     <!-- Main App -->
     <div id="app" class="hidden" style="display:flex; flex-direction:column; height:100%;">
       <div class="app-header">
-        <span>ABARG</span>
+        <div class="logo-container">
+          <img src="alter_logo.png" alt="Alter">
+          <span>Alter</span>
+        </div>
         <div>
           <button onclick="showCreateGroup()" style="font-size:0.9em;padding:6px 10px;margin-right:5px;">+
             Group</button>
@@ -999,7 +1016,7 @@
           style="flex:1; display:flex; justify-content:center; align-items:center; color:#888; background:rgba(255,255,255,0.5);">
           <div style="text-align:center;">
             <div style="font-size:3rem; margin-bottom:1rem;">👋</div>
-            <h2>Welcome to ABARG</h2>
+            <h2>Welcome to Alter</h2>
             <p>Select a chat to start messaging</p>
           </div>
         </div>
@@ -1119,7 +1136,8 @@
         </div>
 
         <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Description (About)</label>
-        <input type="text" id="settingsDescription" placeholder="Hey there! I am using ABARG."
+        <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Description (About)</label>
+        <input type="text" id="settingsDescription" placeholder="Hey there! I am using Alter."
           style="margin-bottom:20px;" />
         <div style="display: flex; gap: 10px;">
           <button onclick="updateProfileDescription()" style="flex:1;">Save</button>

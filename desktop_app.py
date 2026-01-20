@@ -11,7 +11,7 @@ if __name__ == '__main__':
         pyi_splash.close()
 
     # Create window pointing to the live server
-    webview.create_window('ABARG Chat', 'https://abarg.onrender.com', width=1200, height=800, resizable=True)
+    webview.create_window('Alter', 'https://abarg.onrender.com', width=1200, height=800, resizable=True)
     
     # Start webview
     webview.start()
