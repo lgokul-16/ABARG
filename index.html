@@ -441,35 +441,41 @@
     /* STATIC THEMES */
     /* Theme definitions will apply to #chat-background */
 
-    /* 1. Default (Classic Glass) */
+    /* STATIC THEMES - IMAGES */
+    /* Theme definitions will apply to #chat-background */
+
     .theme-default {
       background: transparent;
-      /* Uses body gradient */
     }
 
-    /* 2. Midnight (Dark Blue) */
-    .theme-midnight {
-      background: linear-gradient(135deg, #020617 0%, #172554 100%);
+    .theme-bg1 {
+      background-image: url('bg1.png');
+      background-size: cover;
+      background-position: center;
     }
 
-    /* 3. Forest (WhatsApp-like Green) */
-    .theme-forest {
-      background: linear-gradient(135deg, #052e16 0%, #064e3b 100%);
+    .theme-bg2 {
+      background-image: url('bg2.png');
+      background-size: cover;
+      background-position: center;
     }
 
-    /* 4. Royal (Purple) */
-    .theme-royal {
-      background: linear-gradient(135deg, #2e1065 0%, #581c87 100%);
+    .theme-bg3 {
+      background-image: url('bg3.png');
+      background-size: cover;
+      background-position: center;
     }
 
-    /* 5. Sunset (Warm) */
-    .theme-sunset {
-      background: linear-gradient(135deg, #4c0519 0%, #881337 100%);
+    .theme-bg4 {
+      background-image: url('bg4.png');
+      background-size: cover;
+      background-position: center;
     }
 
-    /* 6. Ocean (Blue) */
-    .theme-ocean {
-      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+    .theme-bg5 {
+      background-image: url('bg5.png');
+      background-size: cover;
+      background-position: center;
     }
 
     /* Theme Selector UI in Settings */
@@ -1127,12 +1133,18 @@
 
         <label style="display:block; margin-bottom:10px; color:var(--text-muted);">Chat Wallpaper</label>
         <div class="theme-grid">
-          <div class="theme-option theme-default" onclick="selectTheme('default')" title="Classic"></div>
-          <div class="theme-option theme-midnight" onclick="selectTheme('midnight')" title="Midnight"></div>
-          <div class="theme-option theme-forest" onclick="selectTheme('forest')" title="Forest"></div>
-          <div class="theme-option theme-royal" onclick="selectTheme('royal')" title="Royal"></div>
-          <div class="theme-option theme-sunset" onclick="selectTheme('sunset')" title="Sunset"></div>
-          <div class="theme-option theme-ocean" onclick="selectTheme('ocean')" title="Ocean"></div>
+          <div class="theme-option" onclick="selectTheme('default')" data-theme="default" title="Default (None)"
+            style="background:var(--bg-gradient); display:flex;align-items:center;justify-content:center;">🚫</div>
+          <div class="theme-option" onclick="selectTheme('bg1')" data-theme="bg1" title="Background 1"
+            style="background-image:url('bg1.png');"></div>
+          <div class="theme-option" onclick="selectTheme('bg2')" data-theme="bg2" title="Background 2"
+            style="background-image:url('bg2.png');"></div>
+          <div class="theme-option" onclick="selectTheme('bg3')" data-theme="bg3" title="Background 3"
+            style="background-image:url('bg3.png');"></div>
+          <div class="theme-option" onclick="selectTheme('bg4')" data-theme="bg4" title="Background 4"
+            style="background-image:url('bg4.png');"></div>
+          <div class="theme-option" onclick="selectTheme('bg5')" data-theme="bg5" title="Background 5"
+            style="background-image:url('bg5.png');"></div>
         </div>
 
         <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Description (About)</label>
@@ -2415,12 +2427,14 @@
       bg.className = '';
 
       // Apply new class
-      bg.classList.add(`theme-${currentWallpaper}`);
+      if (currentWallpaper !== 'default') {
+        bg.classList.add(`theme-${currentWallpaper}`);
+      }
     }
 
     function updateThemeSelectionUI() {
       document.querySelectorAll('.theme-option').forEach(el => {
-        if (el.classList.contains(`theme-${currentWallpaper}`)) {
+        if (el.dataset.theme === currentWallpaper) {
           el.classList.add('active');
         } else {
           el.classList.remove('active');
