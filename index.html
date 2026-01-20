@@ -444,23 +444,26 @@
       background: white;
       border-radius: 50%;
       opacity: 0;
+      box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.4);
+      /* Glow */
       animation: twinkle linear infinite;
     }
 
     @keyframes twinkle {
       0% {
         opacity: 0;
-        transform: scale(0.5);
+        transform: scale(0.3);
       }
 
       50% {
-        opacity: 0.8;
-        transform: scale(1.2);
+        opacity: 1;
+        transform: scale(1.4);
+        box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.8);
       }
 
       100% {
         opacity: 0;
-        transform: scale(0.5);
+        transform: scale(0.3);
       }
     }
 
@@ -468,14 +471,20 @@
     .drop {
       position: absolute;
       width: 2px;
-      background: linear-gradient(to bottom, rgba(59, 130, 246, 0), rgba(59, 130, 246, 0.6));
+      /* Better gradient for "trail" effect */
+      background: linear-gradient(to bottom, transparent, rgba(59, 130, 246, 0.8), transparent);
       animation: fall linear infinite;
     }
 
     @keyframes fall {
-      to {
-        transform: translateY(100vh);
+      from {
+        transform: translateY(-100px);
       }
+
+      to {
+        transform: translateY(110vh);
+      }
+    }
     }
 
     .message {
@@ -2357,32 +2366,33 @@
       const isLight = document.body.classList.contains('light-mode');
 
       if (isLight) {
-        // Waterfall / Rain
-        const count = 30;
+        // Waterfall / Rain - Enhanced
+        const count = 80; // More drops
         for (let i = 0; i < count; i++) {
           const drop = document.createElement('div');
           drop.className = 'drop';
           drop.style.left = Math.random() * 100 + '%';
-          drop.style.top = - Math.random() * 20 + '%'; // Start above
-          drop.style.height = (Math.random() * 50 + 50) + 'px';
-          drop.style.opacity = Math.random() * 0.5 + 0.3;
-          drop.style.animationDuration = (Math.random() * 1 + 1) + 's';
+          drop.style.top = Math.random() * -50 + '%'; // Staggered start above
+          drop.style.height = (Math.random() * 80 + 40) + 'px'; // Varied length
+          drop.style.opacity = Math.random() * 0.6 + 0.2;
+          drop.style.animationDuration = (Math.random() * 0.5 + 0.7) + 's'; // Faster: 0.7s - 1.2s
           drop.style.animationDelay = Math.random() * 2 + 's';
           bg.appendChild(drop);
         }
       } else {
-        // Stars
-        const count = 50;
+        // Stars - Enhanced
+        const count = 100; // More stars
         for (let i = 0; i < count; i++) {
           const star = document.createElement('div');
           star.className = 'star';
-          const size = Math.random() * 3 + 1;
+          const size = Math.random() * 3 + 2; // Slightly larger for glow visibility
           star.style.width = size + 'px';
           star.style.height = size + 'px';
           star.style.left = Math.random() * 100 + '%';
           star.style.top = Math.random() * 100 + '%';
-          star.style.animationDuration = (Math.random() * 2 + 1) + 's';
-          star.style.animationDelay = Math.random() * 2 + 's';
+          // Varied twinkling speeds
+          star.style.animationDuration = (Math.random() * 3 + 1) + 's';
+          star.style.animationDelay = Math.random() * 5 + 's';
           bg.appendChild(star);
         }
       }
