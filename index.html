@@ -438,53 +438,64 @@
       pointer-events: none;
     }
 
-    /* STARS (Dark Mode) */
-    .star {
-      position: absolute;
-      background: white;
-      border-radius: 50%;
-      opacity: 0;
-      box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.4);
-      /* Glow */
-      animation: twinkle linear infinite;
+    /* STATIC THEMES */
+    /* Theme definitions will apply to #chat-background */
+
+    /* 1. Default (Classic Glass) */
+    .theme-default {
+      background: transparent;
+      /* Uses body gradient */
     }
 
-    @keyframes twinkle {
-      0% {
-        opacity: 0;
-        transform: scale(0.3);
-      }
-
-      50% {
-        opacity: 1;
-        transform: scale(1.4);
-        box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.8);
-      }
-
-      100% {
-        opacity: 0;
-        transform: scale(0.3);
-      }
+    /* 2. Midnight (Dark Blue) */
+    .theme-midnight {
+      background: linear-gradient(135deg, #020617 0%, #172554 100%);
     }
 
-    /* WATERFALL/RAIN (Light Mode) */
-    .drop {
-      position: absolute;
-      width: 2px;
-      /* Better gradient for "trail" effect */
-      background: linear-gradient(to bottom, transparent, rgba(59, 130, 246, 0.8), transparent);
-      animation: fall linear infinite;
+    /* 3. Forest (WhatsApp-like Green) */
+    .theme-forest {
+      background: linear-gradient(135deg, #052e16 0%, #064e3b 100%);
     }
 
-    @keyframes fall {
-      from {
-        transform: translateY(-100px);
-      }
-
-      to {
-        transform: translateY(110vh);
-      }
+    /* 4. Royal (Purple) */
+    .theme-royal {
+      background: linear-gradient(135deg, #2e1065 0%, #581c87 100%);
     }
+
+    /* 5. Sunset (Warm) */
+    .theme-sunset {
+      background: linear-gradient(135deg, #4c0519 0%, #881337 100%);
+    }
+
+    /* 6. Ocean (Blue) */
+    .theme-ocean {
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+    }
+
+    /* Theme Selector UI in Settings */
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .theme-option {
+      height: 50px;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .theme-option:hover {
+      transform: scale(1.05);
+      border-color: white;
+    }
+
+    .theme-option.active {
+      border-color: #a855f7;
+      box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.4);
     }
 
     .message {
@@ -1097,11 +1108,21 @@
             Light Mode</button>
         </div>
 
+        <label style="display:block; margin-bottom:10px; color:var(--text-muted);">Chat Wallpaper</label>
+        <div class="theme-grid">
+          <div class="theme-option theme-default" onclick="selectTheme('default')" title="Classic"></div>
+          <div class="theme-option theme-midnight" onclick="selectTheme('midnight')" title="Midnight"></div>
+          <div class="theme-option theme-forest" onclick="selectTheme('forest')" title="Forest"></div>
+          <div class="theme-option theme-royal" onclick="selectTheme('royal')" title="Royal"></div>
+          <div class="theme-option theme-sunset" onclick="selectTheme('sunset')" title="Sunset"></div>
+          <div class="theme-option theme-ocean" onclick="selectTheme('ocean')" title="Ocean"></div>
+        </div>
+
         <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Description (About)</label>
         <input type="text" id="settingsDescription" placeholder="Hey there! I am using ABARG."
           style="margin-bottom:20px;" />
         <div style="display: flex; gap: 10px;">
-          <button onclick="updateProfileDescription()" style="flex:1;">Save Description</button>
+          <button onclick="updateProfileDescription()" style="flex:1;">Save</button>
           <button onclick="hideSettings()" class="secondary-btn" style="flex:1;">Close</button>
         </div>
       </div>
@@ -1526,7 +1547,6 @@
       try {
         // Fetch full profile to get Description (since friend list might be stale or simple)
         // Optimization: We could pass description from friend list click, but let's just fetch or use what we have.
-        // Actually, let's just fetch the friend details if possible, or assume passed data is enough.
         // For now, we update header with simple name.
 
         chatHeader.querySelector('span').innerHTML = `
@@ -1662,6 +1682,7 @@
       document.getElementById('settingsDescription').value = currentUser.description || '';
       document.getElementById('settingsDp').src = avatar(currentUser.profile_image, currentUser.username);
       updateThemeBtn();
+      updateThemeSelectionUI(); // Update UI for wallpaper selection
     }
 
     function hideSettings() {
@@ -2344,7 +2365,8 @@
       const isLight = document.body.classList.contains('light-mode');
       localStorage.setItem('theme', isLight ? 'light' : 'dark');
       updateThemeBtn();
-      initBackground(); // Update background on toggle
+      // Static themes work on top of light/dark mode, or replace background
+      // For now, static themes are just backgrounds for chat area.
     }
 
     function updateThemeBtn() {
@@ -2352,50 +2374,40 @@
       if (btn) {
         const isLight = document.body.classList.contains('light-mode');
         btn.textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
-        // Optional: Change button style based on theme?
         btn.style.background = isLight ? '#0f172a' : 'var(--primary-gradient)';
         btn.style.color = isLight ? 'white' : 'white';
       }
     }
 
-    function initBackground() {
+    // Static Wallpaper Logic
+    let currentWallpaper = 'default';
+
+    function selectTheme(themeName) {
+      currentWallpaper = themeName;
+      localStorage.setItem('chatWallpaper', themeName);
+      applyWallpaper();
+      updateThemeSelectionUI();
+    }
+
+    function applyWallpaper() {
       const bg = document.getElementById('chat-background');
       if (!bg) return;
-      bg.innerHTML = ''; // Clear existing
 
-      const isLight = document.body.classList.contains('light-mode');
+      // Reset classes
+      bg.className = '';
 
-      if (isLight) {
-        // Waterfall / Rain - Enhanced
-        const count = 80; // More drops
-        for (let i = 0; i < count; i++) {
-          const drop = document.createElement('div');
-          drop.className = 'drop';
-          drop.style.left = Math.random() * 100 + '%';
-          drop.style.top = Math.random() * -50 + '%'; // Staggered start above
-          drop.style.height = (Math.random() * 80 + 40) + 'px'; // Varied length
-          drop.style.opacity = Math.random() * 0.6 + 0.2;
-          drop.style.animationDuration = (Math.random() * 0.5 + 0.7) + 's'; // Faster: 0.7s - 1.2s
-          drop.style.animationDelay = Math.random() * 2 + 's';
-          bg.appendChild(drop);
+      // Apply new class
+      bg.classList.add(`theme-${currentWallpaper}`);
+    }
+
+    function updateThemeSelectionUI() {
+      document.querySelectorAll('.theme-option').forEach(el => {
+        if (el.classList.contains(`theme-${currentWallpaper}`)) {
+          el.classList.add('active');
+        } else {
+          el.classList.remove('active');
         }
-      } else {
-        // Stars - Enhanced
-        const count = 100; // More stars
-        for (let i = 0; i < count; i++) {
-          const star = document.createElement('div');
-          star.className = 'star';
-          const size = Math.random() * 3 + 2; // Slightly larger for glow visibility
-          star.style.width = size + 'px';
-          star.style.height = size + 'px';
-          star.style.left = Math.random() * 100 + '%';
-          star.style.top = Math.random() * 100 + '%';
-          // Varied twinkling speeds
-          star.style.animationDuration = (Math.random() * 3 + 1) + 's';
-          star.style.animationDelay = Math.random() * 5 + 's';
-          bg.appendChild(star);
-        }
-      }
+      });
     }
 
     function initTheme() {
@@ -2403,9 +2415,12 @@
       if (savedTheme === 'light') {
         document.body.classList.add('light-mode');
       }
-      initBackground();
-      // Update button text on open settings, but we can just run it
-      // We'll call updateThemeBtn() when modal opens essentially.
+
+      const savedWallpaper = localStorage.getItem('chatWallpaper');
+      if (savedWallpaper) {
+        currentWallpaper = savedWallpaper;
+      }
+      applyWallpaper();
     }
 
     // Initialize Theme immediately
