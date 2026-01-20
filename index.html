@@ -386,6 +386,8 @@
       align-items: center;
       background: var(--glass-header-bg);
       backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 10;
     }
 
     .chat-header img.dp {
@@ -424,10 +426,56 @@
       flex: 1;
       padding: 30px;
       overflow-y: auto;
-      /* Subtle dark pattern */
-      background-image: radial-gradient(var(--text-muted) 1px, transparent 1px);
-      background-size: 24px 24px;
-      opacity: 0.9;
+      position: relative;
+      z-index: 5;
+    }
+
+    #chat-background {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    /* STARS (Dark Mode) */
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      opacity: 0;
+      animation: twinkle linear infinite;
+    }
+
+    @keyframes twinkle {
+      0% {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+
+      50% {
+        opacity: 0.8;
+        transform: scale(1.2);
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+    }
+
+    /* WATERFALL/RAIN (Light Mode) */
+    .drop {
+      position: absolute;
+      width: 2px;
+      background: linear-gradient(to bottom, rgba(59, 130, 246, 0), rgba(59, 130, 246, 0.6));
+      animation: fall linear infinite;
+    }
+
+    @keyframes fall {
+      to {
+        transform: translateY(100vh);
+      }
     }
 
     .message {
@@ -555,6 +603,8 @@
       align-items: center;
       gap: 16px;
       backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 10;
     }
 
     .input-area input {
@@ -890,6 +940,7 @@
         </div>
 
         <div id="chatArea" class="main-chat hidden">
+          <div id="chat-background"></div>
           <div id="chatHeader" class="chat-header">
             <button id="mobileBackBtn" onclick="backToSidebar()">←</button>
             <input type="file" id="dpUpload" hidden onchange="uploadDP(this)" />
@@ -2284,6 +2335,7 @@
       const isLight = document.body.classList.contains('light-mode');
       localStorage.setItem('theme', isLight ? 'light' : 'dark');
       updateThemeBtn();
+      initBackground(); // Update background on toggle
     }
 
     function updateThemeBtn() {
@@ -2297,11 +2349,51 @@
       }
     }
 
+    function initBackground() {
+      const bg = document.getElementById('chat-background');
+      if (!bg) return;
+      bg.innerHTML = ''; // Clear existing
+
+      const isLight = document.body.classList.contains('light-mode');
+
+      if (isLight) {
+        // Waterfall / Rain
+        const count = 30;
+        for (let i = 0; i < count; i++) {
+          const drop = document.createElement('div');
+          drop.className = 'drop';
+          drop.style.left = Math.random() * 100 + '%';
+          drop.style.top = - Math.random() * 20 + '%'; // Start above
+          drop.style.height = (Math.random() * 50 + 50) + 'px';
+          drop.style.opacity = Math.random() * 0.5 + 0.3;
+          drop.style.animationDuration = (Math.random() * 1 + 1) + 's';
+          drop.style.animationDelay = Math.random() * 2 + 's';
+          bg.appendChild(drop);
+        }
+      } else {
+        // Stars
+        const count = 50;
+        for (let i = 0; i < count; i++) {
+          const star = document.createElement('div');
+          star.className = 'star';
+          const size = Math.random() * 3 + 1;
+          star.style.width = size + 'px';
+          star.style.height = size + 'px';
+          star.style.left = Math.random() * 100 + '%';
+          star.style.top = Math.random() * 100 + '%';
+          star.style.animationDuration = (Math.random() * 2 + 1) + 's';
+          star.style.animationDelay = Math.random() * 2 + 's';
+          bg.appendChild(star);
+        }
+      }
+    }
+
     function initTheme() {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'light') {
         document.body.classList.add('light-mode');
       }
+      initBackground();
       // Update button text on open settings, but we can just run it
       // We'll call updateThemeBtn() when modal opens essentially.
     }
