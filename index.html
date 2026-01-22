@@ -1261,7 +1261,7 @@
   <div id="emojiPicker"></div>
 
   <!-- Audio Elements -->
-  <audio id="remoteAudio" autoplay></audio>
+  <audio id="remoteAudio" autoplay playsinline></audio>
   <audio id="ringtone" src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" loop></audio>
 
   <!-- Incoming Call Modal -->
@@ -2725,14 +2725,15 @@
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        currentChatFriendId = data.from; // Set ID BEFORE creating PC to allow ICE candidates
+
         createPeerConnection();
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
-
-        currentChatFriendId = data.from;
 
         socket.emit('answer_call', {
           signal: answer,
@@ -2790,6 +2791,7 @@
       peerConnection.ontrack = (event) => {
         const remoteAudio = document.getElementById('remoteAudio');
         remoteAudio.srcObject = event.streams[0];
+        remoteAudio.play().catch(e => console.error("Audio play failed, user interaction needed?", e));
       };
     }
 
