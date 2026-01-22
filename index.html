@@ -841,13 +841,15 @@
     #searchResults {
       position: absolute;
       width: 100%;
-      background: var(--glass-panel-bg);
+      background: #1e293b;
+      /* Solid background for visibility */
       border: var(--glass-border);
       border-radius: 12px;
       margin-top: 5px;
       max-height: 200px;
       overflow-y: auto;
-      z-index: 100;
+      z-index: 2000;
+      /* Ensure on top of everything */
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
       display: none;
     }
@@ -1057,7 +1059,8 @@
         <input type="text" id="groupName" placeholder="Group name" style="width:100%; margin-bottom: 10px;" />
         <label style="display:block; margin-bottom:5px; color:var(--text-muted); font-size:0.9rem;">Select
           Friends:</label>
-        <div class="member-list" id="friendSelectionList" style="max-height: 200px; margin-bottom: 20px;"></div>
+        <div class="member-list" id="friendSelectionList"
+          style="max-height: 200px; margin-bottom: 20px; overflow-y: auto;"></div>
         <div style="display: flex; gap: 10px;">
           <button onclick="createGroup()" style="flex:1;">Create</button>
           <button onclick="hideCreateGroup()" class="secondary-btn" style="flex:1;">Cancel</button>
@@ -1079,7 +1082,7 @@
     <div id="addMemberModal" class="hidden modal" style="z-index: 1100;"> <!-- Higher z-index -->
       <div class="modal-content">
         <h3>Add Member</h3>
-        <div class="member-list" id="addMemberFriendList" style="max-height: 200px;"></div>
+        <div class="member-list" id="addMemberFriendList" style="max-height: 200px; overflow-y: auto;"></div>
         <div style="margin-top:20px;">
           <button onclick="document.getElementById('addMemberModal').classList.add('hidden')" class="secondary-btn"
             style="width:100%;">Cancel</button>
@@ -1092,7 +1095,7 @@
     <div id="reactionDetailsModal" class="hidden modal">
       <div class="modal-content">
         <h3>Reactions</h3>
-        <div class="member-list" id="reactionDetailsList"></div>
+        <div class="member-list" id="reactionDetailsList" style="max-height: 300px; overflow-y: auto;"></div>
         <div style="margin-top:20px;">
           <button onclick="document.getElementById('reactionDetailsModal').classList.add('hidden')"
             class="secondary-btn" style="width:100%;">Close</button>
@@ -1103,7 +1106,7 @@
     <div id="seenDetailsModal" class="hidden modal">
       <div class="modal-content">
         <h3>Seen By</h3>
-        <div class="member-list" id="seenDetailsList"></div>
+        <div class="member-list" id="seenDetailsList" style="max-height: 300px; overflow-y: auto;"></div>
         <div style="margin-top:20px;">
           <button onclick="document.getElementById('seenDetailsModal').classList.add('hidden')" class="secondary-btn"
             style="width:100%;">Close</button>

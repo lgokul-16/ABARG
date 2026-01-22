@@ -20,7 +20,7 @@ from models import db, User, EmailOTP, FriendRequest, Friend, Conversation, Part
     Friend
 
 # === Flask App Setup ===
-app = Flask(__name__, static_folder='.')
+app = Flask(__name__)
 app.config.from_object(Config)
 
 # Fix for proxy headers (required for Railway/Https)
