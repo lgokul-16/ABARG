@@ -1692,6 +1692,8 @@
     // Chat Functions
     async function openPrivateChat(friendId, friendName, friendDp) {
       deleteChatBtn.classList.remove('hidden');
+      deleteChatBtn.classList.remove('hidden');
+      document.getElementById('callBtn').classList.remove('hidden'); // Show Call Button
       deleteGroupBtn.classList.add('hidden');
       document.getElementById('staticChangeGroupDpBtn').classList.add('hidden'); // Ensure hidden
 
@@ -1788,6 +1790,8 @@
       } catch (e) { console.error(e); }
 
       document.getElementById('deleteChatBtn').classList.add('hidden');
+      document.getElementById('deleteChatBtn').classList.add('hidden');
+      document.getElementById('callBtn').classList.add('hidden'); // Hide Call Button in Group
       document.getElementById('deleteGroupBtn').classList.remove('hidden');
       document.getElementById('groupMembersBtn').classList.remove('hidden');
 
