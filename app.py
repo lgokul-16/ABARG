@@ -1213,7 +1213,7 @@ def on_ice_candidate(data):
     
     emit('ice_candidate', {
         'candidate': candidate,
-        'from': get_jwt_identity() 
+        'from': get_user_id() 
     }, room=str(target_id))
 
 
