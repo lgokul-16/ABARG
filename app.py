@@ -925,6 +925,7 @@ def handle_connect():
         decoded = decode_token(token)
         user_id = int(decoded['sub'])
         user_sessions[request.sid] = user_id
+        join_room(str(user_id)) # Join personal room for signaling
         return True
     except Exception as e:
         print(f"Socket auth failed: {e}")
@@ -1177,6 +1178,49 @@ def handle_mark_seen(data):
             socketio.emit('message_seen_update', payload, room=f"private_{msg.conversation_id}")
         elif msg.group_id:
             socketio.emit('message_seen_update', payload, room=f"group_{msg.group_id}")
+
+
+
+# === WebRTC Signaling Events ===
+
+@socketio.on('call_user')
+def on_call_user(data):
+    user_to_call = data.get('user_to_call')
+    sender_id = data.get('from')
+    signal_data = data.get('signal_data')
+    
+    emit('incoming_call', {
+        'signal': signal_data,
+        'from': sender_id,
+        'callType': 'audio' 
+    }, room=str(user_to_call))
+
+
+@socketio.on('answer_call')
+def on_answer_call(data):
+    caller_id = data.get('to')
+    signal = data.get('signal')
+    
+    emit('call_accepted', {
+        'signal': signal
+    }, room=str(caller_id))
+
+
+@socketio.on('ice_candidate')
+def on_ice_candidate(data):
+    target_id = data.get('to')
+    candidate = data.get('candidate')
+    
+    emit('ice_candidate', {
+        'candidate': candidate,
+        'from': get_jwt_identity() 
+    }, room=str(target_id))
+
+
+@socketio.on('end_call')
+def on_end_call(data):
+    target_id = data.get('to')
+    emit('call_ended', {}, room=str(target_id))
 
 
 # === Run ===
