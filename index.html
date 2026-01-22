@@ -1087,11 +1087,11 @@
               <img id="chatDp" class="dp" />
               <span>Select a chat</span>
             </div>
-            <div>
-              <button id="callBtn" class="hidden" onclick="startCall()" style="margin-right:5px;">📞</button>
-              <button id="deleteChatBtn" class="hidden" onclick="deleteCurrentChat()">🗑</button>
-              <button id="deleteGroupBtn" class="hidden" onclick="deleteCurrentGroup()">🗑</button>
-              <button id="groupMembersBtn" class="hidden" onclick="showGroupMembers()">👥</button>
+            <div class="chat-actions">
+              <button id="callBtn" class="hidden" onclick="startCall()" title="Call">📞</button>
+              <button id="deleteChatBtn" class="hidden" onclick="deleteCurrentChat()" title="Delete Chat">🗑</button>
+              <button id="deleteGroupBtn" class="hidden" onclick="deleteCurrentGroup()" title="Delete Group">🗑</button>
+              <button id="groupMembersBtn" class="hidden" onclick="showGroupMembers()" title="Members">👥</button>
               <input type="file" id="groupIconUpload" hidden onchange="uploadGroupIcon(this)" />
             </div>
           </div>
@@ -2626,19 +2626,31 @@
     }
 
     async function startCall() {
-      if (!currentChatId || currentChatType !== 'private') return;
+      if (!currentChatId || currentChatType !== 'private') {
+        alert("Can only call in private chats.");
+        return;
+      }
 
       // Determine friend details
       const friendName = chatHeader.querySelector('span > div > span').textContent;
       const friendDp = document.getElementById('chatDp').src;
 
       showCallOverlay(friendName, friendDp);
+      document.getElementById('callStatus').textContent = "Accessing Microphone...";
 
       try {
+        // Check for devices first
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasMic = devices.some(d => d.kind === 'audioinput');
+        if (!hasMic) {
+          throw new Error("No microphone found. Please connect a headset.");
+        }
+
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         createPeerConnection();
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
+        document.getElementById('callStatus').textContent = "Calling...";
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
@@ -2649,7 +2661,14 @@
         });
 
       } catch (e) {
-        alert("Call failed: " + e.message);
+        console.error("Call Error:", e);
+        let msg = e.message;
+        if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+          msg = "Microphone permission denied. Please allow access in browser settings.";
+        } else if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
+          msg = "Microphone not found.";
+        }
+        alert("Call Failed: " + msg);
         endCall();
       }
     }
