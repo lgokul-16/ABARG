@@ -1261,7 +1261,7 @@
   <div id="emojiPicker"></div>
 
   <!-- Audio Elements -->
-  <audio id="remoteAudio" autoplay playsinline></audio>
+  <audio id="remoteAudio" autoplay playsinline controls style="display:none;"></audio>
   <audio id="ringtone" src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" loop></audio>
 
   <!-- Incoming Call Modal -->
@@ -1284,14 +1284,44 @@
     <h3 id="callName" style="color:white; font-size:2rem; margin-bottom:10px;">User</h3>
     <p id="callStatus" style="color:#aaa; margin-bottom:30px;">Connected</p>
 
+    <!-- Audio Helper (Hidden by default, shown if autoplay fails) -->
+    <div id="audioHelper" class="hidden" style="margin-bottom:20px;">
+      <p style="color:#ef4444; margin-bottom:5px;">Audio blocked?</p>
+      <button onclick="forcePlayAudio()"
+        style="background:white; color:black; padding:5px 10px; border-radius:12px;">Click to Unmute</button>
+    </div>
+
+
     <div class="call-actions">
       <button class="btn-mute" onclick="toggleMute()">🎤</button>
+      <button class="btn-screen" onclick="startScreenShare()"
+        style="background:rgba(255,255,255,0.2);color:white;">🖥️</button>
       <button class="btn-end" onclick="endCall()">📞</button>
     </div>
+
+    <!-- Video Element for Screen Share -->
+    <video id="remoteVideo" autoplay playsinline
+      style="max-width:90%; max-height:60vh; border-radius:12px; margin-top:20px; display:none; border:2px solid rgba(255,255,255,0.2);"></video>
   </div>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     // ... existing ...
+
+    // Add force play function globally
+    function forcePlayAudio() {
+      const aud = document.getElementById('remoteAudio');
+      if (aud) {
+        aud.play().then(() => {
+          document.getElementById('audioHelper').classList.add('hidden');
+          console.log("Audio started manually");
+        }).catch(e => alert("Still cannot play audio: " + e.message));
+      }
+    }
+
+    // ... (rest of code) ...
+
+    // Updated createPeerConnection function (Need to replace the old one lower down)
+
 
     function formatTime(isoString) {
       if (!isoString) return '';
@@ -2593,7 +2623,9 @@
     initTheme();
 
     /* ================= WebRTC Audio Call Logic ================= */
+    /* ================= WebRTC Audio Call Logic ================= */
     let localStream;
+    let screenStream;
     let peerConnection;
     // let currentChatFriendId = null; // Defined globally above or implicitly
     const rtcConfig = {
@@ -2680,6 +2712,16 @@
       if (!socket) return;
 
       socket.on('incoming_call', async (data) => {
+        // Handle Renegotiation (Screen Share update)
+        if (peerConnection && currentChatFriendId === data.from) {
+          console.log("Renegotiation offer received");
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+          socket.emit('answer_call', { signal: answer, to: data.from });
+          return;
+        }
+
         if (peerConnection) return; // Busy
 
         // Show Modal
@@ -2773,7 +2815,63 @@
       if (localStream) {
         const track = localStream.getAudioTracks()[0];
         track.enabled = !track.enabled;
+        // Optional: Update UI
       }
+    }
+
+    async function startScreenShare() {
+      if (!peerConnection) {
+        alert("You must be in a call to share screen.");
+        return;
+      }
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const videoTrack = screenStream.getVideoTracks()[0];
+
+        // Add to PC
+        // We use the same stream ID to help sync, or a new one. 
+        // process: addTrack returns a sender.
+        const sender = peerConnection.addTrack(videoTrack, localStream);
+
+        // Handle Stop via browser UI
+        videoTrack.onended = () => {
+          stopScreenShare(sender);
+        };
+
+        // Negotiate
+        forceRenegotiation();
+
+        // UI update
+        document.querySelector('.btn-screen').style.background = '#22c55e'; // Green
+
+      } catch (e) {
+        console.error("Screen Share Error", e);
+        alert("Detailed error: " + e.message);
+      }
+    }
+
+    function stopScreenShare(sender) {
+      if (sender) {
+        try { peerConnection.removeTrack(sender); } catch (e) { }
+      }
+      if (screenStream) {
+        screenStream.getTracks().forEach(t => t.stop());
+        screenStream = null;
+      }
+      forceRenegotiation();
+      document.querySelector('.btn-screen').style.background = 'rgba(255,255,255,0.2)';
+    }
+
+    async function forceRenegotiation() {
+      try {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('call_user', {
+          user_to_call: currentChatFriendId,
+          signal_data: offer,
+          from: currentUser.id
+        });
+      } catch (e) { console.error("Renegotiation failed", e); }
     }
 
     function createPeerConnection() {
@@ -2789,9 +2887,31 @@
       };
 
       peerConnection.ontrack = (event) => {
-        const remoteAudio = document.getElementById('remoteAudio');
-        remoteAudio.srcObject = event.streams[0];
-        remoteAudio.play().catch(e => console.error("Audio play failed, user interaction needed?", e));
+        const stream = event.streams[0];
+        if (event.track.kind === 'video') {
+          console.log("Remote Video Track Received");
+          const vid = document.getElementById('remoteVideo');
+          vid.srcObject = stream;
+          vid.style.display = 'block';
+          vid.play().catch(e => console.error("Video play failed", e));
+        } else {
+          console.log("Remote Audio Track Received");
+          const aud = document.getElementById('remoteAudio');
+          aud.srcObject = stream;
+          aud.volume = 1.0; // Ensure max volume
+
+          // Try to play
+          const playPromise = aud.play();
+          if (playPromise !== undefined) {
+            playPromise.then(_ => {
+              console.log("Audio playing successfully");
+            }).catch(e => {
+              console.error("Audio play failed (Autoplay blocked?):", e);
+              // Show helper UI
+              document.getElementById('audioHelper').classList.remove('hidden');
+            });
+          }
+        }
       };
     }
 
