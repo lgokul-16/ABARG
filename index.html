@@ -2623,16 +2623,25 @@
     initTheme();
 
     /* ================= WebRTC Audio Call Logic ================= */
-    /* ================= WebRTC Audio Call Logic ================= */
     let localStream;
     let screenStream;
     let peerConnection;
     // let currentChatFriendId = null; // Defined globally above or implicitly
+
+    // 1. Optimize Connection Speed
     const rtcConfig = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' }
-      ]
+      ],
+      iceCandidatePoolSize: 10 // Pre-gather candidates
+    };
+
+    // 2. Improve Audio Quality
+    const audioConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
     };
 
     // UI Helpers
@@ -2678,12 +2687,12 @@
           throw new Error("No microphone found. Please connect a headset.");
         }
 
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints }); // Use optimized constraints
         createPeerConnection();
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
         document.getElementById('callStatus').textContent = "Calling...";
-        const offer = await peerConnection.createOffer();
+        const offer = await peerConnection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true }); // Explicit offer
         await peerConnection.setLocalDescription(offer);
 
         socket.emit('call_user', {
@@ -2754,6 +2763,14 @@
         endCall(false);
         alert("Call Ended");
       });
+
+      // 3. Fix Screen Share Cache
+      socket.on('stop_screen_share', () => {
+        console.log("Remote screen share stopped");
+        const vid = document.getElementById('remoteVideo');
+        vid.srcObject = null; // Clear stream
+        vid.style.display = 'none'; // Hide element
+      });
     }
 
     // Call Actions
@@ -2766,7 +2783,7 @@
       document.getElementById('callStatus').textContent = "Connecting...";
 
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints }); // Use optimized constraints
 
         currentChatFriendId = data.from; // Set ID BEFORE creating PC to allow ICE candidates
 
@@ -2829,8 +2846,6 @@
         const videoTrack = screenStream.getVideoTracks()[0];
 
         // Add to PC
-        // We use the same stream ID to help sync, or a new one. 
-        // process: addTrack returns a sender.
         const sender = peerConnection.addTrack(videoTrack, localStream);
 
         // Handle Stop via browser UI
@@ -2858,13 +2873,19 @@
         screenStream.getTracks().forEach(t => t.stop());
         screenStream = null;
       }
+
+      // Explicit Stop Signal
+      if (socket && currentChatFriendId) {
+        socket.emit('stop_screen_share', { to: currentChatFriendId });
+      }
+
       forceRenegotiation();
       document.querySelector('.btn-screen').style.background = 'rgba(255,255,255,0.2)';
     }
 
     async function forceRenegotiation() {
       try {
-        const offer = await peerConnection.createOffer();
+        const offer = await peerConnection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true }); // Ensure audio offer persists
         await peerConnection.setLocalDescription(offer);
         socket.emit('call_user', {
           user_to_call: currentChatFriendId,
