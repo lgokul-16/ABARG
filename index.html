@@ -1312,6 +1312,9 @@
     <div
       style="padding:10px; background:#f1f5f9; border-bottom:1px solid #ddd; display:flex; align-items:center; gap:10px;">
       <h3 style="margin:0; margin-right:auto; color:#333;">🎨 Whiteboard</h3>
+      <!-- Status Indicator -->
+      <div id="wbStatus" title="Status"
+        style="width:12px; height:12px; border-radius:50%; background:#ccc; margin-right:10px;"></div>
       <input type="color" id="wbColor" value="#000000" title="Color">
       <input type="range" id="wbSize" min="2" max="20" value="4" title="Brush Size">
       <button onclick="toggleEraser()" id="wbEraserBtn"
@@ -3092,6 +3095,7 @@
 
       // Emit
       if (socket && currentChatId) {
+        // console.log("Emitting draw:", { chat_type: currentChatType, chat_id: currentChatId });
         socket.emit('whiteboard_draw', {
           chat_type: currentChatType,
           chat_id: currentChatId,
@@ -3102,6 +3106,8 @@
           color: finalColor,
           width: finalSize
         });
+      } else {
+        console.warn("WB: No socket or chat ID", socket, currentChatId);
       }
 
       lastX = pos.x;
@@ -3145,12 +3151,31 @@
 
     // Socket Listeners for Whiteboard
     function setupWhiteboardSocket() {
-      if (!socket) return;
+      const statusEl = document.getElementById('wbStatus');
+      if (!socket) {
+        console.error("WB Setup: Socket not ready");
+        if (statusEl) statusEl.style.background = '#ef4444'; // Red
+        return;
+      }
+
+      console.log("WB Setup: Listeners attached");
+      if (statusEl) statusEl.style.background = '#22c55e'; // Green
+
       socket.on('whiteboard_draw', (data) => {
+        // console.log("WB Recv:", data);
         drawLine(data.x0, data.y0, data.x1, data.y1, data.color, data.width);
       });
       socket.on('whiteboard_clear', () => {
+        console.log("WB Recv: Clear");
         ctx.clearRect(0, 0, wbCanvas.width, wbCanvas.height);
+      });
+
+      // Handle disconnect
+      socket.on('disconnect', () => {
+        if (statusEl) statusEl.style.background = '#ef4444';
+      });
+      socket.on('connect', () => {
+        if (statusEl) statusEl.style.background = '#22c55e';
       });
     }
 

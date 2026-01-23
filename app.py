@@ -1184,10 +1184,16 @@ def handle_mark_seen(data):
 @socketio.on('whiteboard_draw')
 def handle_whiteboard_draw(data):
     user_id = get_user_id()
-    if not user_id: return
+    if not user_id: 
+        print("WB: No user ID")
+        return
 
     chat_type = data.get('chat_type')
-    chat_id = data.get('chat_id')
+    try:
+        chat_id = int(data.get('chat_id'))
+    except:
+        print("WB: Invalid ID")
+        return
     
     room = None
     if chat_type == 'private':
@@ -1198,6 +1204,8 @@ def handle_whiteboard_draw(data):
          if GroupMember.query.filter_by(group_id=chat_id, user_id=user_id).first():
             room = f"group_{chat_id}"
 
+    print(f"WB Draw: User={user_id}, Type={chat_type}, ID={chat_id}, Room={room}")
+
     if room:
         # Broadcast to room (including sender? No, sender draws locally for zero latency)
         # But for simplicity, we can broadcast to everyone including sender (include_self=False)
@@ -1207,7 +1215,10 @@ def handle_whiteboard_draw(data):
 def handle_whiteboard_clear(data):
     user_id = get_user_id()
     chat_type = data.get('chat_type')
-    chat_id = data.get('chat_id')
+    try:
+        chat_id = int(data.get('chat_id'))
+    except:
+        return
     
     room = None
     if chat_type == 'private':
