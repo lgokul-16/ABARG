@@ -1180,6 +1180,47 @@ def handle_mark_seen(data):
             socketio.emit('message_seen_update', payload, room=f"group_{msg.group_id}")
 
 
+# === Whiteboard Events ===
+@socketio.on('whiteboard_draw')
+def handle_whiteboard_draw(data):
+    user_id = get_user_id()
+    if not user_id: return
+
+    chat_type = data.get('chat_type')
+    chat_id = data.get('chat_id')
+    
+    room = None
+    if chat_type == 'private':
+        # Verify participation
+        if Participant.query.filter_by(conversation_id=chat_id, user_id=user_id).first():
+            room = f"private_{chat_id}"
+    elif chat_type == 'group':
+         if GroupMember.query.filter_by(group_id=chat_id, user_id=user_id).first():
+            room = f"group_{chat_id}"
+
+    if room:
+        # Broadcast to room (including sender? No, sender draws locally for zero latency)
+        # But for simplicity, we can broadcast to everyone including sender (include_self=False)
+        emit('whiteboard_draw', data, room=room, include_self=False)
+
+@socketio.on('whiteboard_clear')
+def handle_whiteboard_clear(data):
+    user_id = get_user_id()
+    chat_type = data.get('chat_type')
+    chat_id = data.get('chat_id')
+    
+    room = None
+    if chat_type == 'private':
+        if Participant.query.filter_by(conversation_id=chat_id, user_id=user_id).first():
+            room = f"private_{chat_id}"
+    elif chat_type == 'group':
+         if GroupMember.query.filter_by(group_id=chat_id, user_id=user_id).first():
+            room = f"group_{chat_id}"
+
+    if room:
+        emit('whiteboard_clear', {}, room=room, include_self=False)
+
+
 
 # === WebRTC Signaling Events ===
 

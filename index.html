@@ -1089,6 +1089,7 @@
             </div>
             <div class="chat-actions">
               <button id="callBtn" class="hidden" onclick="startCall()" title="Call">📞</button>
+              <button id="whiteboardBtn" class="hidden" onclick="openWhiteboard()" title="Collaborate">🎨</button>
               <button id="deleteChatBtn" class="hidden" onclick="deleteCurrentChat()" title="Delete Chat">🗑</button>
               <button id="deleteGroupBtn" class="hidden" onclick="deleteCurrentGroup()" title="Delete Group">🗑</button>
               <button id="groupMembersBtn" class="hidden" onclick="showGroupMembers()" title="Members">👥</button>
@@ -1284,13 +1285,14 @@
     <h3 id="callName" style="color:white; font-size:2rem; margin-bottom:10px;">User</h3>
     <p id="callStatus" style="color:#aaa; margin-bottom:30px;">Connected</p>
 
-    <!-- Audio Helper (Hidden by default, shown if autoplay fails) -->
-    <div id="audioHelper" class="hidden" style="margin-bottom:20px;">
-      <p style="color:#ef4444; margin-bottom:5px;">Audio blocked?</p>
+    <!-- Audio Helper -->
+    <div id="audioHelper" class="hidden"
+      style="position:absolute; top:20px; left:50%; transform:translateX(-50%); z-index:3000;">
       <button onclick="forcePlayAudio()"
-        style="background:white; color:black; padding:5px 10px; border-radius:12px;">Click to Unmute</button>
+        style="background:#ef4444; color:white; padding:10px 20px; border-radius:30px; border:2px solid white; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.5); animation: pulse 2s infinite;">
+        🔇 TAP TO UNMUTE AUDIO
+      </button>
     </div>
-
 
     <div class="call-actions">
       <button class="btn-mute" onclick="toggleMute()">🎤</button>
@@ -1302,6 +1304,26 @@
     <!-- Video Element for Screen Share -->
     <video id="remoteVideo" autoplay playsinline
       style="max-width:90%; max-height:60vh; border-radius:12px; margin-top:20px; display:none; border:2px solid rgba(255,255,255,0.2);"></video>
+  </div>
+
+  <!-- Whiteboard Modal -->
+  <div id="whiteboardModal" class="hidden"
+    style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:3000; display:flex; flex-direction:column;">
+    <div
+      style="padding:10px; background:#f1f5f9; border-bottom:1px solid #ddd; display:flex; align-items:center; gap:10px;">
+      <h3 style="margin:0; margin-right:auto; color:#333;">🎨 Whiteboard</h3>
+      <input type="color" id="wbColor" value="#000000" title="Color">
+      <input type="range" id="wbSize" min="2" max="20" value="4" title="Brush Size">
+      <button onclick="toggleEraser()" id="wbEraserBtn"
+        style="padding:5px 10px; border-radius:5px; background:white; border:1px solid #ccc;">Eraser</button>
+      <button onclick="clearWhiteboardLocal()"
+        style="padding:5px 10px; border-radius:5px; background:#ef4444; color:white; border:none;">Clear</button>
+      <button onclick="closeWhiteboard()"
+        style="padding:5px 10px; border-radius:5px; background:#333; color:white; border:none;">Close</button>
+    </div>
+    <div style="flex:1; position:relative; overflow:hidden;" id="wbContainer">
+      <canvas id="wbCanvas" style="cursor:crosshair; touch-action:none;"></canvas>
+    </div>
   </div>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
@@ -1712,20 +1734,18 @@
 
     function backToSidebar() {
       document.querySelector('.layout-wrapper').classList.remove('show-chat');
-      currentChatId = null; // Optional: deselect chat so returning resets state? Or keep state?
-      // Let's keep state but clear active view
-      // Actually good to clear currentChat so we stop listening? 
-      // For simple UI, just hiding is enough, but "Back" usually implies leaving the chat.
-      // Let's just toggle UI for now.
+      currentChatId = null;
+      // Close any open whiteboard
+      document.getElementById('whiteboardModal').classList.add('hidden');
     }
 
     // Chat Functions
     async function openPrivateChat(friendId, friendName, friendDp) {
       deleteChatBtn.classList.remove('hidden');
-      deleteChatBtn.classList.remove('hidden');
-      document.getElementById('callBtn').classList.remove('hidden'); // Show Call Button
+      document.getElementById('callBtn').classList.remove('hidden');
+      document.getElementById('whiteboardBtn').classList.remove('hidden'); // Show WB
       deleteGroupBtn.classList.add('hidden');
-      document.getElementById('staticChangeGroupDpBtn').classList.add('hidden'); // Ensure hidden
+      document.getElementById('staticChangeGroupDpBtn').classList.add('hidden');
 
       // Hide Welcome, Show Chat
       document.getElementById('welcomeScreen').classList.add('hidden');
@@ -1820,8 +1840,8 @@
       } catch (e) { console.error(e); }
 
       document.getElementById('deleteChatBtn').classList.add('hidden');
-      document.getElementById('deleteChatBtn').classList.add('hidden');
       document.getElementById('callBtn').classList.add('hidden'); // Hide Call Button in Group
+      document.getElementById('whiteboardBtn').classList.remove('hidden'); // Show WB for Groups too!
       document.getElementById('deleteGroupBtn').classList.remove('hidden');
       document.getElementById('groupMembersBtn').classList.remove('hidden');
 
@@ -2918,6 +2938,16 @@
         socket.emit('stop_screen_share', { to: currentChatFriendId });
       }
 
+      // FORCE CLEAR VIDEO BUFFER (Fixes frozen frame)
+      const vid = document.getElementById('remoteVideo');
+      vid.pause();
+      vid.removeAttribute('src'); // Remove src attribute
+      vid.removeAttribute('srcObject'); // Remove srcObject
+      vid.srcObject = null;
+      vid.src = "";
+      vid.load(); // Force reload to clear buffer
+      vid.style.display = 'none';
+
       forceRenegotiation();
       document.querySelector('.btn-screen').style.background = 'rgba(255,255,255,0.2)';
     }
@@ -2991,6 +3021,145 @@
         }
       };
     }
+
+    /* ================= Whiteboard Logic ================= */
+    const wbCanvas = document.getElementById('wbCanvas');
+    const ctx = wbCanvas.getContext('2d');
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    function openWhiteboard() {
+      document.getElementById('whiteboardModal').classList.remove('hidden');
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+    }
+
+    function closeWhiteboard() {
+      document.getElementById('whiteboardModal').classList.add('hidden');
+      window.removeEventListener('resize', resizeCanvas);
+    }
+
+    function resizeCanvas() {
+      const container = document.getElementById('wbContainer');
+      wbCanvas.width = container.clientWidth;
+      wbCanvas.height = container.clientHeight;
+    }
+
+    function getPos(e) {
+      const rect = wbCanvas.getBoundingClientRect();
+      let clientX = e.clientX;
+      let clientY = e.clientY;
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      }
+      return {
+        x: (clientX - rect.left) / wbCanvas.width, // Normalize 0-1
+        y: (clientY - rect.top) / wbCanvas.height
+      };
+    }
+
+    // Drawing Events
+    wbCanvas.addEventListener('mousedown', startDraw);
+    wbCanvas.addEventListener('touchstart', startDraw);
+    wbCanvas.addEventListener('mousemove', draw);
+    wbCanvas.addEventListener('touchmove', draw);
+    wbCanvas.addEventListener('mouseup', stopDraw);
+    wbCanvas.addEventListener('touchend', stopDraw);
+
+    function startDraw(e) {
+      isDrawing = true;
+      const pos = getPos(e);
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      e.preventDefault(); // Stop scrolling on touch
+
+      const pos = getPos(e);
+      const color = document.getElementById('wbColor').value;
+      const size = document.getElementById('wbSize').value;
+      const eraser = document.getElementById('wbEraserBtn').classList.contains('active');
+
+      const finalColor = eraser ? '#ffffff' : color;
+      const finalSize = eraser ? size * 5 : size;
+
+      // Draw Local
+      drawLine(lastX, lastY, pos.x, pos.y, finalColor, finalSize);
+
+      // Emit
+      if (socket && currentChatId) {
+        socket.emit('whiteboard_draw', {
+          chat_type: currentChatType,
+          chat_id: currentChatId,
+          x0: lastX,
+          y0: lastY,
+          x1: pos.x,
+          y1: pos.y,
+          color: finalColor,
+          width: finalSize
+        });
+      }
+
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+
+    function stopDraw() {
+      isDrawing = false;
+    }
+
+    function drawLine(x0, y0, x1, y1, color, width) {
+      ctx.beginPath();
+      ctx.moveTo(x0 * wbCanvas.width, y0 * wbCanvas.height);
+      ctx.lineTo(x1 * wbCanvas.width, y1 * wbCanvas.height);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.closePath();
+    }
+
+    function toggleEraser() {
+      const btn = document.getElementById('wbEraserBtn');
+      btn.classList.toggle('active');
+      if (btn.classList.contains('active')) {
+        btn.style.background = '#ddd';
+      } else {
+        btn.style.background = 'white';
+      }
+    }
+
+    function clearWhiteboardLocal() {
+      ctx.clearRect(0, 0, wbCanvas.width, wbCanvas.height);
+      if (socket && currentChatId) {
+        socket.emit('whiteboard_clear', {
+          chat_type: currentChatType,
+          chat_id: currentChatId
+        });
+      }
+    }
+
+    // Socket Listeners for Whiteboard
+    function setupWhiteboardSocket() {
+      if (!socket) return;
+      socket.on('whiteboard_draw', (data) => {
+        drawLine(data.x0, data.y0, data.x1, data.y1, data.color, data.width);
+      });
+      socket.on('whiteboard_clear', () => {
+        ctx.clearRect(0, 0, wbCanvas.width, wbCanvas.height);
+      });
+    }
+
+    // Inject listener setup into connectSocket
+    const originalConnect = connectSocket;
+    connectSocket = function (token) {
+      originalConnect(token); // Call original
+      setupWhiteboardSocket(); // Add WB listeners
+    };
 
     // Start
     if (localStorage.getItem('token')) {
