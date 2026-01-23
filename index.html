@@ -1295,15 +1295,37 @@
     </div>
 
     <div class="call-actions">
-      <button class="btn-mute" onclick="toggleMute()">🎤</button>
+      <button id="mainMuteBtn" class="btn-mute" onclick="toggleMute()">🎤</button>
       <button class="btn-screen" onclick="startScreenShare()"
         style="background:rgba(255,255,255,0.2);color:white;">🖥️</button>
+      <button onclick="minimizeCall()"
+        style="background:rgba(255,255,255,0.2); color:white; border-radius:50%; width:60px; height:60px; font-size:1.5rem; border:none; transition:transform 0.2s; display:flex; align-items:center; justify-content:center;">🔽</button>
       <button class="btn-end" onclick="endCall()">📞</button>
     </div>
 
     <!-- Video Element for Screen Share -->
     <video id="remoteVideo" autoplay playsinline
       style="max-width:90%; max-height:60vh; border-radius:12px; margin-top:20px; display:none; border:2px solid rgba(255,255,255,0.2);"></video>
+  </div>
+
+  <!-- Mini Call Widget -->
+  <div id="miniCallWidget" class="hidden"
+    style="position:fixed; bottom:20px; right:20px; background:#1e293b; border:1px solid rgba(255,255,255,0.2); border-radius:16px; padding:10px 20px; display:flex; align-items:center; gap:15px; z-index:4000; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+    <div
+      style="width:40px; height:40px; border-radius:50%; background:var(--primary-gradient); display:flex; align-items:center; justify-content:center; animation:pulse 2s infinite;">
+      📞</div>
+    <div style="display:flex; flex-direction:column;">
+      <span style="font-weight:bold; font-size:0.9rem; color:white;" id="miniCallName">User</span>
+      <span style="font-size:0.75rem; color:#4ade80;">Active Call</span>
+    </div>
+    <div style="display:flex; gap:10px; margin-left:10px;">
+      <button onclick="maximizeCall()"
+        style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:50%; width:36px; height:36px;">⤢</button>
+      <button id="miniMuteBtn" onclick="toggleMute()"
+        style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:50%; width:36px; height:36px;">🎤</button>
+      <button onclick="endCall()"
+        style="background:#ef4444; width:36px; height:36px; border-radius:50%; color:white; border:none; display:flex; align-items:center; justify-content:center;">✖</button>
+    </div>
   </div>
 
   <!-- Whiteboard Modal -->
@@ -2833,6 +2855,19 @@
 
         currentChatFriendId = data.from; // Set ID BEFORE creating PC to allow ICE candidates
 
+        // FIX: Ensure conversation context is loaded for whiteboard sync & minimize visibility
+        try {
+          const convData = await api(`/conversation-with/${currentChatFriendId}`);
+          currentChatId = convData.conversation_id;
+          currentChatType = 'private'; // Calls are private only
+
+          // Join socket room for WB events
+          if (socket) socket.emit('join_private_chat', { conversation_id: currentChatId });
+
+          // Optionally open chat in background? No, let minimize handle it if logical.
+          // But setting currentChatId is CRITICAL for whiteboard.
+        } catch (e) { console.error("Failed to load chat context for call:", e); }
+
         createPeerConnection();
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
@@ -2876,6 +2911,10 @@
         peerConnection = null;
       }
 
+      // Cleanup Mini Widget
+      document.getElementById('miniCallWidget').classList.add('hidden');
+      document.getElementById('callOverlay').classList.add('hidden'); // Ensure closed
+
       if (emitEvent && currentChatFriendId) {
         socket.emit('end_call', { to: currentChatFriendId });
       }
@@ -2885,8 +2924,71 @@
       if (localStream) {
         const track = localStream.getAudioTracks()[0];
         track.enabled = !track.enabled;
-        // Optional: Update UI
+
+        // Update UI
+        const isMuted = !track.enabled;
+        const mainBtn = document.getElementById('mainMuteBtn');
+        const miniBtn = document.getElementById('miniMuteBtn');
+
+        if (isMuted) {
+          if (mainBtn) {
+            mainBtn.style.background = '#ef4444';
+            mainBtn.textContent = '🔇';
+          }
+          if (miniBtn) {
+            miniBtn.style.background = '#ef4444';
+            miniBtn.textContent = '🔇';
+          }
+        } else {
+          if (mainBtn) {
+            mainBtn.style.background = 'rgba(255,255,255,0.2)';
+            mainBtn.textContent = '🎤';
+          }
+          if (miniBtn) {
+            miniBtn.style.background = 'rgba(255,255,255,0.1)';
+            miniBtn.textContent = '🎤';
+          }
+        }
       }
+    }
+
+    // Minimize/Maximize Call
+    function minimizeCall() {
+      document.getElementById('callOverlay').classList.add('hidden');
+      document.getElementById('miniCallWidget').classList.remove('hidden');
+
+      // Update name in widget
+      const name = document.getElementById('callName').textContent;
+      document.getElementById('miniCallName').textContent = name;
+
+      // If not already in chat view (e.g. accepted from generic screen), maybe try to go to chat?
+      if (currentChatId) {
+        // If we have ID (set in acceptCall/startCall), ensure layout is correct
+        document.querySelector('.layout-wrapper').classList.add('show-chat');
+        document.getElementById('chatArea').classList.remove('hidden');
+        document.getElementById('welcomeScreen').classList.add('hidden');
+
+        // If chat content empty/stale, reload it?
+        // openPrivateChat does UI setup, maybe call it?
+        // But openPrivateChat does a lot of fetches.
+        // If we just accepted call, currentChatId is set but UI might be blank.
+        // Let's call openPrivateChat logic to be safe if content is empty?
+        if (document.getElementById('messages').children.length === 0 && currentChatFriendId) {
+          // Reuse openPrivateChat logic but with minimal disruption? 
+          // Actually simpler: just let user navigate if they want.
+          // But better UX: Show the chat they are talking in.
+
+          // We need friend details... we have ID.
+          // Search friend list for details
+          const items = document.querySelectorAll('#chatList li');
+          // This is messy. Let's just trust user or basic visibility.
+        }
+      }
+    }
+
+    function maximizeCall() {
+      document.getElementById('callOverlay').classList.remove('hidden');
+      document.getElementById('miniCallWidget').classList.add('hidden');
     }
 
     async function startScreenShare() {
