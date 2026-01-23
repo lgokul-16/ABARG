@@ -1201,9 +1201,15 @@ def on_answer_call(data):
     caller_id = data.get('to')
     signal = data.get('signal')
     
+    # Notify caller
     emit('call_accepted', {
         'signal': signal
     }, room=str(caller_id))
+    
+    # Notify my other devices to stop ringing
+    sender_id = get_user_id()
+    if sender_id:
+        emit('call_answered_elsewhere', {}, room=str(sender_id), include_self=False)
 
 
 @socketio.on('ice_candidate')
@@ -1220,7 +1226,14 @@ def on_ice_candidate(data):
 @socketio.on('end_call')
 def on_end_call(data):
     target_id = data.get('to')
+    user_id = get_user_id()
+    
+    # Notify target
     emit('call_ended', {}, room=str(target_id))
+    
+    # Notify my other devices (and self, to be safe/consistent)
+    if user_id:
+        emit('call_ended', {}, room=str(user_id))
 
 
 # === Run ===

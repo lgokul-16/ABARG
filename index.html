@@ -1261,7 +1261,7 @@
   <div id="emojiPicker"></div>
 
   <!-- Audio Elements -->
-  <audio id="remoteAudio" autoplay playsinline controls style="display:none;"></audio>
+  <audio id="remoteAudio" autoplay playsinline controls style="width:0;height:0;opacity:0;position:absolute;"></audio>
   <audio id="ringtone" src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" loop></audio>
 
   <!-- Incoming Call Modal -->
@@ -2775,8 +2775,16 @@
       });
 
       socket.on('call_ended', () => {
+        // Clear everything
         endCall(false);
-        alert("Call Ended");
+        document.getElementById('incomingCallModal').classList.add('hidden'); // Force hide
+        stopRingtone();
+        // alert("Call Ended"); // Optional: less spammy if we remove alert
+      });
+
+      socket.on('call_answered_elsewhere', () => {
+        document.getElementById('incomingCallModal').classList.add('hidden');
+        stopRingtone();
       });
 
       // 3. Fix Screen Share Cache
@@ -2864,7 +2872,16 @@
         return;
       }
       try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        // OPTIMIZATION: Limit resolution and frame rate to reduce lag
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            cursor: "always",
+            width: { max: 1280, ideal: 1280 },
+            height: { max: 720, ideal: 720 },
+            frameRate: { max: 15 } // Lower frame rate for smoother presentation
+          },
+          audio: false
+        });
         const videoTrack = screenStream.getVideoTracks()[0];
 
         // Add to PC
@@ -2930,6 +2947,20 @@
         }
       };
 
+      peerConnection.onconnectionstatechange = () => {
+        console.log("Connection State:", peerConnection.connectionState);
+        const status = document.getElementById('callStatus');
+        if (peerConnection.connectionState === 'connected') {
+          status.textContent = "Connected (SECURE)";
+          status.style.color = "#4ade80"; // Green
+        } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
+          status.textContent = "Reconnecting...";
+          status.style.color = "#facc15"; // Yellow
+        } else if (peerConnection.connectionState === 'closed') {
+          status.textContent = "Call Ended";
+        }
+      };
+
       peerConnection.ontrack = (event) => {
         const stream = event.streams[0];
         if (event.track.kind === 'video') {
@@ -2937,12 +2968,14 @@
           const vid = document.getElementById('remoteVideo');
           vid.srcObject = stream;
           vid.style.display = 'block';
+          vid.muted = true; // Mute video element to avoid audio echo (audio handled by remoteAudio)
           vid.play().catch(e => console.error("Video play failed", e));
         } else {
           console.log("Remote Audio Track Received");
           const aud = document.getElementById('remoteAudio');
           aud.srcObject = stream;
           aud.volume = 1.0; // Ensure max volume
+          aud.muted = false; // Explicitly unmute
 
           // Try to play
           const playPromise = aud.play();
