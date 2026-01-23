@@ -2626,6 +2626,7 @@
     let localStream;
     let screenStream;
     let peerConnection;
+    let candidateQueue = []; // Queue for ICE candidates
     // let currentChatFriendId = null; // Defined globally above or implicitly
 
     // 1. Optimize Connection Speed
@@ -2641,7 +2642,7 @@
     const audioConstraints = {
       echoCancellation: true,
       noiseSuppression: true,
-      autoGainControl: true
+      autoGainControl: { ideal: true }
     };
 
     // UI Helpers
@@ -2725,6 +2726,10 @@
         if (peerConnection && currentChatFriendId === data.from) {
           console.log("Renegotiation offer received");
           await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+          // Process queued candidates now that we have remote description
+          while (candidateQueue.length > 0) {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(candidateQueue.shift()));
+          }
           const answer = await peerConnection.createAnswer();
           await peerConnection.setLocalDescription(answer);
           socket.emit('answer_call', { signal: answer, to: data.from });
@@ -2750,11 +2755,21 @@
 
       socket.on('call_accepted', async (data) => {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+        // Process queued candidates
+        while (candidateQueue.length > 0) {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(candidateQueue.shift()));
+        }
         document.getElementById('callStatus').textContent = "Connected";
       });
 
       socket.on('ice_candidate', async (data) => {
-        if (peerConnection) {
+        if (!peerConnection) return;
+
+        // Queue candidates if remote description isn't set yet
+        if (!peerConnection.remoteDescription) {
+          console.log("Queueing ICE candidate (RemoteDesc not set)");
+          candidateQueue.push(data.candidate);
+        } else {
           await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
       });
@@ -2791,6 +2806,12 @@
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+
+        // Process queued candidates
+        while (candidateQueue.length > 0) {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(candidateQueue.shift()));
+        }
+
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
 
@@ -2815,6 +2836,7 @@
 
     function endCall(emitEvent = true) {
       hideCallOverlay();
+      candidateQueue = []; // Clear queue
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
       }
@@ -2897,6 +2919,7 @@
 
     function createPeerConnection() {
       peerConnection = new RTCPeerConnection(rtcConfig);
+      candidateQueue = []; // Reset queue for new connection
 
       peerConnection.onicecandidate = (event) => {
         if (event.candidate && currentChatFriendId) {
