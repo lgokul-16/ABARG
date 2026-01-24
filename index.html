@@ -1120,17 +1120,18 @@
 
     .wb-toolbar {
       position: absolute;
-      top: 80px;
-      left: 20px;
+      top: 60px;
+      left: 0;
+      width: 100%;
       background: var(--glass-panel-bg);
       backdrop-filter: blur(10px);
-      border: var(--border-elegant);
-      border-radius: 12px;
+      border-bottom: var(--border-elegant);
       padding: 10px;
       display: flex;
-      flex-direction: column;
-      gap: 10px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      flex-direction: row;
+      justify-content: center;
+      gap: 20px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
       z-index: 10;
     }
 
@@ -3782,10 +3783,20 @@
         if (pts.length > 1) {
           ctx.moveTo(pts[pts.length - 2].x, pts[pts.length - 2].y);
           ctx.lineTo(pos.x, pos.y);
-          ctx.strokeStyle = wbState.currentPath.color;
+
+          if (wbState.tool === 'eraser') {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(0,0,0,1)';
+          } else {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = wbState.currentPath.color;
+          }
+
           ctx.lineWidth = wbState.currentPath.size;
           ctx.lineCap = 'round';
           ctx.stroke();
+          // Reset to safe default
+          ctx.globalCompositeOperation = 'source-over';
         }
       } else if (wbState.tool === 'shape') {
         redrawCanvas();
@@ -3841,8 +3852,16 @@
 
       wbState.history.forEach(action => {
         ctx.beginPath();
+        // Reset composite operation to default
+        ctx.globalCompositeOperation = 'source-over';
+
         if (action.type === 'path') {
-          ctx.strokeStyle = action.color;
+          if (action.isEraser) {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(0,0,0,1)'; // Color doesn't matter for destination-out, but opacity 1 is key
+          } else {
+            ctx.strokeStyle = action.color;
+          }
           ctx.lineWidth = action.size;
           ctx.lineCap = 'round';
           if (action.points.length > 0) {
@@ -3864,6 +3883,8 @@
           ctx.fillText(action.text, action.x, action.y);
         }
       });
+      // Reset after loop
+      ctx.globalCompositeOperation = 'source-over';
     }
 
     // --- Toolbar ---
