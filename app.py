@@ -1231,6 +1231,71 @@ def handle_whiteboard_clear(data):
     if room:
         emit('whiteboard_clear', {}, room=room, include_self=False)
 
+@socketio.on('whiteboard_update')
+def handle_whiteboard_update(data):
+    user_id = get_user_id()
+    if not user_id: return
+    
+    # Broadcast update event (for moves/edits)
+    # Similar structure to draw, just relaying
+    chat_type = data.get('chat_type')
+    try: chat_id = int(data.get('chat_id'))
+    except: return
+    
+    room = _get_wb_room(user_id, chat_type, chat_id)
+    if room:
+        emit('whiteboard_update', data, room=room, include_self=False)
+
+@socketio.on('whiteboard_delete')
+def handle_whiteboard_delete(data):
+    user_id = get_user_id()
+    if not user_id: return
+    
+    chat_type = data.get('chat_type')
+    try: chat_id = int(data.get('chat_id'))
+    except: return
+    
+    room = _get_wb_room(user_id, chat_type, chat_id)
+    if room:
+        emit('whiteboard_delete', data, room=room, include_self=False)
+
+@socketio.on('whiteboard_request_state')
+def handle_wb_request_state(data):
+    user_id = get_user_id()
+    if not user_id: return
+    
+    chat_type = data.get('chat_type')
+    try: chat_id = int(data.get('chat_id'))
+    except: return
+    
+    room = _get_wb_room(user_id, chat_type, chat_id)
+    if room:
+        # Request state from OTHERS in the room
+        # We ask ONE client to send the state? Or server maintains it?
+        # Server doesn't have live state in RAM usually.
+        # Option A: Relay "who has state?" -> Client responds -> Relay back.
+        # Option B: Just let clients sync optimistically.
+        # Better: Emit 'request_state_from_peers' to room (excluding sender).
+        # The first peer to reply sends 'whiteboard_state_snapshot' which we forward to requester.
+        emit('request_state_from_peers', {'requester_id': request.sid}, room=room, include_self=False)
+
+@socketio.on('whiteboard_state_snapshot')
+def handle_wb_snapshot(data):
+    # Forward snapshot to specific requester
+    requester_sid = data.get('requester_id')
+    if requester_sid:
+        emit('whiteboard_state_snapshot', data, room=requester_sid)
+
+# Helper for room resolution (DRY)
+def _get_wb_room(user_id, chat_type, chat_id):
+    if chat_type == 'private':
+        if Participant.query.filter_by(conversation_id=chat_id, user_id=user_id).first():
+            return f"private_{chat_id}"
+    elif chat_type == 'group':
+         if GroupMember.query.filter_by(group_id=chat_id, user_id=user_id).first():
+            return f"group_{chat_id}"
+    return None
+
 
 
 # === WebRTC Signaling Events ===
