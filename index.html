@@ -2044,74 +2044,75 @@
     }
 
     // Chat Functions
-    document.getElementById('deleteChatBtn').classList.remove('hidden');
-    document.getElementById('callBtn').classList.remove('hidden');
-    // Whiteboard Disabled per user request
-    // const wbBtn = document.getElementById('whiteboardBtn');
-    // wbBtn.classList.remove('hidden');
-    // wbBtn.onclick = () => openChatWhiteboard(); 
-    document.getElementById('whiteboardBtn').classList.add('hidden'); // Ensure hidden
+    async function openPrivateChat(friendId, friendName, friendDp) {
+      document.getElementById('deleteChatBtn').classList.remove('hidden');
+      document.getElementById('callBtn').classList.remove('hidden');
+      // Whiteboard Disabled per user request
+      // const wbBtn = document.getElementById('whiteboardBtn');
+      // wbBtn.classList.remove('hidden');
+      // wbBtn.onclick = () => openChatWhiteboard(); 
+      document.getElementById('whiteboardBtn').classList.add('hidden'); // Ensure hidden
 
-    deleteGroupBtn.classList.add('hidden');
-    document.getElementById('staticChangeGroupDpBtn').classList.add('hidden');
+      deleteGroupBtn.classList.add('hidden');
+      document.getElementById('staticChangeGroupDpBtn').classList.add('hidden');
 
-    // Hide Welcome, Show Chat
-    document.getElementById('welcomeScreen').classList.add('hidden');
-    chatArea.classList.remove('hidden');
+      // Hide Welcome, Show Chat
+      document.getElementById('welcomeScreen').classList.add('hidden');
+      chatArea.classList.remove('hidden');
 
-    // Mobile View Toggle
-    document.querySelector('.layout-wrapper').classList.add('show-chat');
+      // Mobile View Toggle
+      document.querySelector('.layout-wrapper').classList.add('show-chat');
 
-    try {
-      // Fetch full profile to get Description (since friend list might be stale or simple)
-      // Optimization: We could pass description from friend list click, but let's just fetch or use what we have.
-      // For now, we update header with simple name.
+      try {
+        // Fetch full profile to get Description (since friend list might be stale or simple)
+        // Optimization: We could pass description from friend list click, but let's just fetch or use what we have.
+        // For now, we update header with simple name.
 
-      chatHeader.querySelector('span').innerHTML = `
+        chatHeader.querySelector('span').innerHTML = `
             <div style="display:flex;flex-direction:column;">
                 <span>${friendName}</span>
                 <span id="headerStatus" style="font-size:0.75em;color:#666;font-weight:normal;"></span>
             </div>
         `;
 
-      // Find friend in friend list to get description (avoids extra API call if we re-render friend list correctly)
-      // But friend list isn't globally stored easily. Let's just rely on updated loadFriends?
-      // Let's implement a quick fetch or just look at UI.
-      // Better: openPrivateChat arguments are from click. Let's update arguments or fetch.
-      // We will fetch /friends again to find this user or just accept it's missing until reload.
+        // Find friend in friend list to get description (avoids extra API call if we re-render friend list correctly)
+        // But friend list isn't globally stored easily. Let's just rely on updated loadFriends?
+        // Let's implement a quick fetch or just look at UI.
+        // Better: openPrivateChat arguments are from click. Let's update arguments or fetch.
+        // We will fetch /friends again to find this user or just accept it's missing until reload.
 
-      const convData = await api(`/conversation-with/${friendId}`);
-      currentChatId = convData.conversation_id;
-      currentChatType = 'private';
-      currentChatFriendId = friendId;
+        const convData = await api(`/conversation-with/${friendId}`);
+        currentChatId = convData.conversation_id;
+        currentChatType = 'private';
+        currentChatFriendId = friendId;
 
 
-      document.getElementById('chatDp').src = avatar(friendDp, friendName);
-      groupMembersBtn.classList.add('hidden');
+        document.getElementById('chatDp').src = avatar(friendDp, friendName);
+        groupMembersBtn.classList.add('hidden');
 
-      messagesDiv.innerHTML = '';
+        messagesDiv.innerHTML = '';
 
-      // Fetch history
-      const history = await api(`/chat/history/${currentChatId}`);
-      messagesDiv.innerHTML = '';
-      history.forEach(addMessageToUI);
+        // Fetch history
+        const history = await api(`/chat/history/${currentChatId}`);
+        messagesDiv.innerHTML = '';
+        history.forEach(addMessageToUI);
 
-      // Fetch Friend Details for Description update
-      try {
-        const friends = await api('/friends');
-        const f = friends.find(u => u.id === friendId);
-        if (f && f.description) {
-          document.getElementById('headerStatus').textContent = f.description;
+        // Fetch Friend Details for Description update
+        try {
+          const friends = await api('/friends');
+          const f = friends.find(u => u.id === friendId);
+          if (f && f.description) {
+            document.getElementById('headerStatus').textContent = f.description;
+          }
+        } catch (e) { }
+
+        if (socket) {
+          socket.emit('join_private_chat', { conversation_id: currentChatId });
         }
-      } catch (e) { }
-
-      if (socket) {
-        socket.emit('join_private_chat', { conversation_id: currentChatId });
+      } catch (e) {
+        console.error("Error opening chat:", e);
+        alert("Could not open chat: " + e.message);
       }
-    } catch (e) {
-      console.error("Error opening chat:", e);
-      alert("Could not open chat: " + e.message);
-    }
     }
 
     async function openGroupChat(id, name, iconUrl) {
