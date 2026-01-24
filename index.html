@@ -2021,9 +2021,17 @@
 
     function backToSidebar() {
       document.querySelector('.layout-wrapper').classList.remove('show-chat');
+      document.getElementById('sidebar').classList.remove('hidden');
+      if (window.innerWidth <= 768) {
+        document.querySelector('.sidebar').style.display = 'flex';
+        document.querySelector('.main-chat').style.display = 'flex';
+      }
+      document.getElementById('whiteboardDashboard').classList.add('hidden');
+      document.getElementById('welcomeScreen').classList.remove('hidden');
+
       currentChatId = null;
-      // Close any open whiteboard
-      document.getElementById('whiteboardModal').classList.add('hidden');
+      // Close editor if open
+      document.getElementById('whiteboardUI').classList.add('hidden');
     }
 
     // Chat Functions
