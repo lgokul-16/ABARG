@@ -1689,17 +1689,34 @@
       return url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=128C7E&color=fff`;
     }
 
-    async function api(url, options = {}) {
+    async function api(endpoint, options = {}) {
       const token = localStorage.getItem('token');
       const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-      if (token && !['/login', '/register', '/verify-otp'].includes(url)) {
+
+      // Determine if this is a public endpoint that doesn't need auth
+      const publicEndpoints = ['/login', '/register', '/verify-otp'];
+      const cleanEndpoint = endpoint.split('?')[0]; // Ignore query params for check
+
+      if (token && !publicEndpoints.includes(cleanEndpoint)) {
         headers['Authorization'] = `Bearer ${token}`;
+        // console.log(`Attaching token for ${endpoint}`);
+      } else {
+        // console.log(`Skipping token for ${endpoint} (Public or No Token)`);
       }
-      console.log(`API Call to ${url}`, { token: token ? 'Presnet' : 'Missing', headers });
-      const res = await fetch(API_BASE + url, { ...options, headers });
+
+      console.log(`API Call to ${endpoint}`, { hasToken: !!token, headers });
+      const res = await fetch(API_BASE + endpoint, { ...options, headers });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ msg: 'Server error' }));
-        throw new Error(err.msg || 'Request failed');
+        let errMsg = 'Request failed';
+        try {
+          const err = await res.json();
+          errMsg = err.msg || errMsg;
+          if (res.status === 401 && errMsg === 'Token has expired') {
+            logout(); // Auto logout on expire
+            return;
+          }
+        } catch (e) { }
+        throw new Error(errMsg);
       }
       return res.json();
     }
