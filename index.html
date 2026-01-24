@@ -1316,7 +1316,10 @@
 
         <!-- Whiteboard Dashboard -->
         <div id="whiteboardDashboard" class="wb-dashboard hidden">
-          <h2 style="margin-bottom:20px;">My Whiteboards</h2>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="margin:0;">My Whiteboards</h2>
+            <button onclick="backToSidebar()" class="secondary-btn">Back to Chat</button>
+          </div>
           <div style="margin-bottom:20px;">
             <button onclick="createNewWhiteboard()"
               style="background:var(--primary-gradient); color:white; padding:10px 20px; border-radius:30px; font-weight:600;">+
@@ -1551,12 +1554,14 @@
         <span id="wbSaveStatus" style="font-size:0.8rem; color:var(--text-muted);">Saved</span>
         <button onclick="saveWhiteboard()"
           style="background:var(--primary-gradient); color:white; padding:8px 20px; border-radius:20px;">Save</button>
-        <button onclick="closeWhiteboardUI()" class="secondary-btn">Close</button>
+        <button onclick="closeWhiteboardUI()" class="secondary-btn"
+          style="background:rgba(255, 255, 255, 0.1); color:var(--text-main); border:1px solid var(--border-elegant);">Exit</button>
       </div>
     </div>
 
     <!-- Toolbar -->
     <div class="wb-toolbar">
+      <button class="wb-tool-btn" id="tool-select" onclick="setTool('select')" title="Select & Move">👆</button>
       <button class="wb-tool-btn active" id="tool-pen" onclick="setTool('pen')" title="Pen">✏️</button>
       <button class="wb-tool-btn" id="tool-eraser" onclick="setTool('eraser')" title="Eraser">🧹</button>
       <button class="wb-tool-btn" id="tool-text" onclick="setTool('text')" title="Text">T</button>
@@ -1575,8 +1580,11 @@
       </div>
     </div>
 
-    <div class="wb-canvas-container" id="wbCanvasContainer">
+    <div class="wb-canvas-container" id="wbCanvasContainer" style="position:relative;">
       <canvas id="wbCanvasNew"></canvas>
+      <input type="text" id="wbTextInput"
+        style="position:absolute; display:none; background:transparent; border:1px dashed #666; color:var(--text-main); font-size:16px; padding:2px; z-index:20; outline:none;"
+        onblur="commitText()" onkeydown="handleTextKey(event)">
     </div>
   </div>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -3744,12 +3752,28 @@
     }
 
     function wbStart(e) {
+      if (e.target.id === 'wbTextInput') return; // Don't trigger on input click
       wbState.isDrawing = true;
       const pos = wbGetPos(e);
       wbState.startX = pos.x;
       wbState.startY = pos.y;
 
-      if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
+      if (wbState.tool === 'select') {
+        const hit = wbHitTest(pos.x, pos.y);
+        if (hit) {
+          wbState.selection = hit;
+          wbState.isDragging = true;
+          // Bring to front (optional, but good UX)
+          // wbState.history.splice(wbState.history.indexOf(hit), 1);
+          // wbState.history.push(hit);
+        } else {
+          wbState.selection = null;
+        }
+        redrawCanvas(); // To show selection highlight
+      } else if (wbState.tool === 'text') {
+        wbShowTextInput(pos.x, pos.y);
+        wbState.isDrawing = false; // Text is managed by input now
+      } else if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
         wbState.currentPath = {
           type: 'path',
           points: [{ x: pos.x, y: pos.y }],
@@ -3757,26 +3781,34 @@
           size: wbState.tool === 'eraser' ? wbState.size * 5 : wbState.size,
           isEraser: wbState.tool === 'eraser'
         };
-      } else if (wbState.tool === 'text') {
-        const text = prompt("Enter text:");
-        if (text) {
-          wbState.history.push({
-            type: 'text', x: pos.x, y: pos.y, text: text, color: wbState.color, size: wbState.size * 5
-          });
-          redrawCanvas();
-          saveWhiteboard(true);
-        }
-        wbState.isDrawing = false;
       }
     }
 
     function wbMove(e) {
-      if (!wbState.isDrawing) return;
+      if (!wbState.isDrawing && !wbState.isDragging) return;
       const pos = wbGetPos(e);
 
-      if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
-        wbState.currentPath.points.push({ x: pos.x, y: pos.y });
+      if (wbState.tool === 'select' && wbState.selection && wbState.isDragging) {
+        const dx = pos.x - wbState.startX;
+        const dy = pos.y - wbState.startY;
 
+        const item = wbState.selection;
+        if (item.type === 'path') {
+          item.points.forEach(p => { p.x += dx; p.y += dy; });
+        } else {
+          item.x += dx;
+          item.y += dy;
+        }
+
+        wbState.startX = pos.x;
+        wbState.startY = pos.y;
+        redrawCanvas();
+        return;
+      }
+
+      if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
+        wbState.currentPath.points.push({ x: pos.x, y: pos.y }); // ... existing logic
+        // Inline Redraw Optimization
         const ctx = wbState.ctx;
         ctx.beginPath();
         const pts = wbState.currentPath.points;
@@ -3795,55 +3827,127 @@
           ctx.lineWidth = wbState.currentPath.size;
           ctx.lineCap = 'round';
           ctx.stroke();
-          // Reset to safe default
           ctx.globalCompositeOperation = 'source-over';
         }
-      } else if (wbState.tool === 'shape') {
+      }
+      // ... (shape logic remains same, but need to bring it here if replacing whole block)
+      else if (wbState.tool === 'shape') {
         redrawCanvas();
         const ctx = wbState.ctx;
         ctx.beginPath();
         ctx.strokeStyle = wbState.color;
         ctx.lineWidth = wbState.size;
-
         const w = pos.x - wbState.startX;
         const h = pos.y - wbState.startY;
-
-        const shapeDef = SHAPES[wbState.shapeType];
-        if (shapeDef) {
-          shapeDef.path(ctx, wbState.startX, wbState.startY, w, h);
-          ctx.stroke();
-        }
+        const def = SHAPES[wbState.shapeType];
+        if (def) { def.path(ctx, wbState.startX, wbState.startY, w, h); ctx.stroke(); }
       }
     }
 
     function wbEnd(e) {
+      if (wbState.isDragging) {
+        wbState.isDragging = false;
+        saveWhiteboard(true);
+        return;
+      }
       if (!wbState.isDrawing) return;
       wbState.isDrawing = false;
 
       if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
         wbState.history.push(wbState.currentPath);
       } else if (wbState.tool === 'shape') {
-        let pos;
-        try { pos = wbGetPos(e); } catch (ex) { return; }
-
+        // ... existing shape end logic
+        let pos; try { pos = wbGetPos(e); } catch (ex) { return; }
         const w = pos.x - wbState.startX;
         const h = pos.y - wbState.startY;
-
         if (Math.abs(w) > 5 || Math.abs(h) > 5) {
           wbState.history.push({
-            type: 'shape',
-            shape: wbState.shapeType,
-            x: wbState.startX,
-            y: wbState.startY,
-            w: w, h: h,
-            color: wbState.color,
-            size: wbState.size
+            type: 'shape', shape: wbState.shapeType,
+            x: wbState.startX, y: wbState.startY, w: w, h: h,
+            color: wbState.color, size: wbState.size
           });
         }
         redrawCanvas();
       }
-
       saveWhiteboard(true);
+    }
+
+    // --- Helpers for Text & Select ---
+    function wbHitTest(x, y) {
+      // Iterate backwards
+      for (let i = wbState.history.length - 1; i >= 0; i--) {
+        const item = wbState.history[i];
+        if (item.type === 'text') {
+          // Approximate text box
+          const fontSize = item.size * 3;
+          const width = item.text.length * fontSize * 0.6;
+          const height = fontSize;
+          if (x >= item.x && x <= item.x + width && y >= item.y - height && y <= item.y) {
+            return item;
+          }
+        } else if (item.type === 'shape') {
+          const minX = Math.min(item.x, item.x + item.w);
+          const maxX = Math.max(item.x, item.x + item.w);
+          const minY = Math.min(item.y, item.y + item.h);
+          const maxY = Math.max(item.y, item.y + item.h);
+          if (x >= minX && x <= maxX && y >= minY && y <= maxY) return item;
+        } else if (item.type === 'path') {
+          // Simple bounding box for paths
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          item.points.forEach(p => {
+            if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+          });
+          // Add padding
+          const pad = item.size + 5;
+          if (x >= minX - pad && x <= maxX + pad && y >= minY - pad && y <= maxY + pad) return item;
+        }
+      }
+      return null;
+    }
+
+    function wbShowTextInput(x, y, val = '') {
+      const input = document.getElementById('wbTextInput');
+      input.style.display = 'block';
+      input.style.left = (x - 2) + 'px'; // Adjust for border
+      input.style.top = (y - 12) + 'px'; // Adjust for font size alignment
+      input.value = val;
+      // Style match
+      input.style.fontSize = (wbState.size * 3) + 'px';
+      input.style.color = wbState.color;
+      input.focus();
+
+      // Store creating pos
+      wbState.textX = x;
+      wbState.textY = y;
+    }
+
+    function commitText() {
+      const input = document.getElementById('wbTextInput');
+      if (input.style.display === 'none') return;
+      const text = input.value;
+      if (text) {
+        wbState.history.push({
+          type: 'text',
+          x: wbState.textX,
+          y: wbState.textY,
+          text: text,
+          color: wbState.color,
+          size: wbState.size * 5 // Align scale logic
+        });
+        redrawCanvas();
+        saveWhiteboard(true);
+      }
+      input.style.display = 'none';
+      input.value = '';
+    }
+
+    function handleTextKey(e) {
+      if (e.key === 'Enter') {
+        commitText();
+      } else if (e.key === 'Escape') {
+        document.getElementById('wbTextInput').style.display = 'none';
+      }
     }
 
     function redrawCanvas() {
@@ -3852,13 +3956,20 @@
 
       wbState.history.forEach(action => {
         ctx.beginPath();
-        // Reset composite operation to default
         ctx.globalCompositeOperation = 'source-over';
+
+        // Highlight selection
+        if (wbState.selection === action) {
+          ctx.shadowColor = 'cyan';
+          ctx.shadowBlur = 10;
+        } else {
+          ctx.shadowBlur = 0;
+        }
 
         if (action.type === 'path') {
           if (action.isEraser) {
             ctx.globalCompositeOperation = 'destination-out';
-            ctx.strokeStyle = 'rgba(0,0,0,1)'; // Color doesn't matter for destination-out, but opacity 1 is key
+            ctx.strokeStyle = 'rgba(0,0,0,1)';
           } else {
             ctx.strokeStyle = action.color;
           }
@@ -3879,11 +3990,11 @@
           ctx.stroke();
         } else if (action.type === 'text') {
           ctx.fillStyle = action.color;
-          ctx.font = `${action.size * 3}px sans-serif`;
+          ctx.font = `${action.size * 3}px sans-serif`; // Consistent font sizing
           ctx.fillText(action.text, action.x, action.y);
         }
+        ctx.shadowBlur = 0; // Reset
       });
-      // Reset after loop
       ctx.globalCompositeOperation = 'source-over';
     }
 
