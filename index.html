@@ -3243,1018 +3243,1044 @@
 
     // Minimize/Maximize Call
     function minimizeCall() {
+      const overlay = document.getElementById('callOverlay');
+      const miniWidget = document.getElementById('miniCallWidget');
+      const miniStatus = document.getElementById('miniCallStatus');
 
-      async function startScreenShare() {
-        if (!peerConnection) {
-          alert("You must be in a call to share screen.");
-          return;
-        }
-        try {
-          // OPTIMIZATION: Limit resolution and frame rate to reduce lag
-          screenStream = await navigator.mediaDevices.getDisplayMedia({
-            video: {
-              cursor: "always",
-              width: { max: 1280, ideal: 1280 },
-              height: { max: 720, ideal: 720 },
-              frameRate: { max: 15 } // Lower frame rate for smoother presentation
-            },
-            audio: false
-          });
-          const videoTrack = screenStream.getVideoTracks()[0];
+      overlay.classList.add('hidden');
+      miniWidget.classList.remove('hidden');
 
-          // Add to PC
-          const sender = peerConnection.addTrack(videoTrack, localStream);
+      // Determine name: Use chat name or incoming call data
+      let name = "Unknown";
+      const callNameEl = document.getElementById('callName');
 
-          // Handle Stop via browser UI
-          videoTrack.onended = () => {
-            stopScreenShare(sender);
-          };
-
-          // Negotiate
-          forceRenegotiation();
-
-          // UI update
-          document.querySelector('.btn-screen').style.background = '#22c55e'; // Green
-
-        } catch (e) {
-          console.error("Screen Share Error", e);
-          alert("Detailed error: " + e.message);
-        }
+      if (callNameEl && callNameEl.textContent && callNameEl.textContent !== "Unknown") {
+        name = callNameEl.textContent;
+      } else if (currentChatName) {
+        name = currentChatName;
+      } else if (window.incomingCallData && window.incomingCallData.from) {
+        name = window.incomingCallData.from;
       }
 
-      function stopScreenShare(sender) {
-        if (sender) {
-          try { peerConnection.removeTrack(sender); } catch (e) { }
-        }
-        if (screenStream) {
-          screenStream.getTracks().forEach(t => t.stop());
-          screenStream = null;
-        }
+      miniStatus.textContent = `On call with ${name}`;
+    }
 
-        // Explicit Stop Signal
-        if (socket && currentChatFriendId) {
-          socket.emit('stop_screen_share', { to: currentChatFriendId });
-        }
+    function maximizeCall() {
+      document.getElementById('callOverlay').classList.remove('hidden');
+      document.getElementById('miniCallWidget').classList.add('hidden');
+    }
 
-        // FORCE CLEAR VIDEO BUFFER (Fixes frozen frame)
-        const vid = document.getElementById('remoteVideo');
-        vid.pause();
-        vid.removeAttribute('src'); // Remove src attribute
-        vid.removeAttribute('srcObject'); // Remove srcObject
-        vid.srcObject = null;
-        vid.src = "";
-        vid.load(); // Force reload to clear buffer
-        vid.style.display = 'none';
+    async function startScreenShare() {
+      if (!peerConnection) {
+        alert("You must be in a call to share screen.");
+        return;
+      }
+      try {
+        // OPTIMIZATION: Limit resolution and frame rate to reduce lag
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            cursor: "always",
+            width: { max: 1280, ideal: 1280 },
+            height: { max: 720, ideal: 720 },
+            frameRate: { max: 15 } // Lower frame rate for smoother presentation
+          },
+          audio: false
+        });
+        const videoTrack = screenStream.getVideoTracks()[0];
 
+        // Add to PC
+        const sender = peerConnection.addTrack(videoTrack, localStream);
+
+        // Handle Stop via browser UI
+        videoTrack.onended = () => {
+          stopScreenShare(sender);
+        };
+
+        // Negotiate
         forceRenegotiation();
-        document.querySelector('.btn-screen').style.background = 'rgba(255,255,255,0.2)';
+
+        // UI update
+        document.querySelector('.btn-screen').style.background = '#22c55e'; // Green
+
+      } catch (e) {
+        console.error("Screen Share Error", e);
+        alert("Detailed error: " + e.message);
+      }
+    }
+
+    function stopScreenShare(sender) {
+      if (sender) {
+        try { peerConnection.removeTrack(sender); } catch (e) { }
+      }
+      if (screenStream) {
+        screenStream.getTracks().forEach(t => t.stop());
+        screenStream = null;
       }
 
-      async function forceRenegotiation() {
-        try {
-          const offer = await peerConnection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true }); // Ensure audio offer persists
-          await peerConnection.setLocalDescription(offer);
-          socket.emit('call_user', {
-            user_to_call: currentChatFriendId,
-            signal_data: offer,
-            from: currentUser.id
+      // Explicit Stop Signal
+      if (socket && currentChatFriendId) {
+        socket.emit('stop_screen_share', { to: currentChatFriendId });
+      }
+
+      // FORCE CLEAR VIDEO BUFFER (Fixes frozen frame)
+      const vid = document.getElementById('remoteVideo');
+      vid.pause();
+      vid.removeAttribute('src'); // Remove src attribute
+      vid.removeAttribute('srcObject'); // Remove srcObject
+      vid.srcObject = null;
+      vid.src = "";
+      vid.load(); // Force reload to clear buffer
+      vid.style.display = 'none';
+
+      forceRenegotiation();
+      document.querySelector('.btn-screen').style.background = 'rgba(255,255,255,0.2)';
+    }
+
+    async function forceRenegotiation() {
+      try {
+        const offer = await peerConnection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true }); // Ensure audio offer persists
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('call_user', {
+          user_to_call: currentChatFriendId,
+          signal_data: offer,
+          from: currentUser.id
+        });
+      } catch (e) { console.error("Renegotiation failed", e); }
+    }
+
+    function createPeerConnection() {
+      peerConnection = new RTCPeerConnection(rtcConfig);
+      candidateQueue = []; // Reset queue for new connection
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate && currentChatFriendId) {
+          socket.emit('ice_candidate', {
+            to: currentChatFriendId,
+            candidate: event.candidate
           });
-        } catch (e) { console.error("Renegotiation failed", e); }
-      }
+        }
+      };
 
-      function createPeerConnection() {
-        peerConnection = new RTCPeerConnection(rtcConfig);
-        candidateQueue = []; // Reset queue for new connection
+      peerConnection.onconnectionstatechange = () => {
+        console.log("Connection State:", peerConnection.connectionState);
+        const status = document.getElementById('callStatus');
+        if (peerConnection.connectionState === 'connected') {
+          status.textContent = "Connected (SECURE)";
+          status.style.color = "#4ade80"; // Green
+        } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
+          status.textContent = "Reconnecting...";
+          status.style.color = "#facc15"; // Yellow
+        } else if (peerConnection.connectionState === 'closed') {
+          status.textContent = "Call Ended";
+        }
+      };
 
-        peerConnection.onicecandidate = (event) => {
-          if (event.candidate && currentChatFriendId) {
-            socket.emit('ice_candidate', {
-              to: currentChatFriendId,
-              candidate: event.candidate
+      peerConnection.ontrack = (event) => {
+        const stream = event.streams[0];
+        if (event.track.kind === 'video') {
+          console.log("Remote Video Track Received");
+          const vid = document.getElementById('remoteVideo');
+          vid.srcObject = stream;
+          vid.style.display = 'block';
+          vid.muted = true; // Mute video element to avoid audio echo (audio handled by remoteAudio)
+          vid.play().catch(e => console.error("Video play failed", e));
+        } else {
+          console.log("Remote Audio Track Received");
+          const aud = document.getElementById('remoteAudio');
+          aud.srcObject = stream;
+          aud.volume = 1.0; // Ensure max volume
+          aud.muted = false; // Explicitly unmute
+
+          // Try to play
+          const playPromise = aud.play();
+          if (playPromise !== undefined) {
+            playPromise.then(_ => {
+              console.log("Audio playing successfully");
+            }).catch(e => {
+              console.error("Audio play failed (Autoplay blocked?):", e);
+              // Show helper UI
+              document.getElementById('audioHelper').classList.remove('hidden');
             });
           }
-        };
+        }
+      };
+    }
 
-        peerConnection.onconnectionstatechange = () => {
-          console.log("Connection State:", peerConnection.connectionState);
-          const status = document.getElementById('callStatus');
-          if (peerConnection.connectionState === 'connected') {
-            status.textContent = "Connected (SECURE)";
-            status.style.color = "#4ade80"; // Green
-          } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
-            status.textContent = "Reconnecting...";
-            status.style.color = "#facc15"; // Yellow
-          } else if (peerConnection.connectionState === 'closed') {
-            status.textContent = "Call Ended";
-          }
-        };
-
-        peerConnection.ontrack = (event) => {
-          const stream = event.streams[0];
-          if (event.track.kind === 'video') {
-            console.log("Remote Video Track Received");
-            const vid = document.getElementById('remoteVideo');
-            vid.srcObject = stream;
-            vid.style.display = 'block';
-            vid.muted = true; // Mute video element to avoid audio echo (audio handled by remoteAudio)
-            vid.play().catch(e => console.error("Video play failed", e));
-          } else {
-            console.log("Remote Audio Track Received");
-            const aud = document.getElementById('remoteAudio');
-            aud.srcObject = stream;
-            aud.volume = 1.0; // Ensure max volume
-            aud.muted = false; // Explicitly unmute
-
-            // Try to play
-            const playPromise = aud.play();
-            if (playPromise !== undefined) {
-              playPromise.then(_ => {
-                console.log("Audio playing successfully");
-              }).catch(e => {
-                console.error("Audio play failed (Autoplay blocked?):", e);
-                // Show helper UI
-                document.getElementById('audioHelper').classList.remove('hidden');
-              });
-            }
-          }
-        };
-      }
-
-      // Legacy Whiteboard Logic Removed
+    // Legacy Whiteboard Logic Removed
 
 
 
 
-      // Start
-      // App Initialization
-      if (localStorage.getItem('token')) {
-        initApp();
-      } else {
-      }
+    // Start
+    // App Initialization
+    if (localStorage.getItem('token')) {
+      initApp();
+    } else {
+    }
   </script>
   <script>
-      /* ================= Whiteboard Logic V2 (Standalone) ================= */
+    /* ================= Whiteboard Logic V2 (Standalone) ================= */
 
-      // --- State & Constants ---
-      const SHAPES = {
-        'rect': { name: 'Rectangle', icon: '⬜', path: (ctx, x, y, w, h) => ctx.rect(x, y, w, h) },
-        'circle': { name: 'Circle', icon: '⚪', path: (ctx, x, y, w, h) => { ctx.arc(x + w / 2, y + h / 2, Math.abs(w) / 2, 0, 2 * Math.PI); } },
-        'triangle': {
-          name: 'Triangle', icon: '🔺', path: (ctx, x, y, w, h) => {
-            ctx.moveTo(x + w / 2, y); ctx.lineTo(x, y + h); ctx.lineTo(x + w, y + h); ctx.closePath();
-          }
-        },
-        'star': {
-          name: 'Star', icon: '⭐', path: (ctx, x, y, w, h) => {
-            const cx = x + w / 2, cy = y + h / 2, outer = Math.abs(w) / 2, inner = outer / 2;
-            for (let i = 0; i < 5; i++) {
-              ctx.lineTo(cx + Math.cos((18 + i * 72) / 180 * Math.PI) * outer, cy - Math.sin((18 + i * 72) / 180 * Math.PI) * outer);
-              ctx.lineTo(cx + Math.cos((54 + i * 72) / 180 * Math.PI) * inner, cy - Math.sin((54 + i * 72) / 180 * Math.PI) * inner);
-            }
-            ctx.closePath();
-          }
-        },
-        'arrow_r': {
-          name: 'Arrow Right', icon: '➡️', path: (ctx, x, y, w, h) => {
-            const my = y + h / 2;
-            ctx.moveTo(x, my - h / 4); ctx.lineTo(x + w * 0.7, my - h / 4); ctx.lineTo(x + w * 0.7, y);
-            ctx.lineTo(x + w, my); ctx.lineTo(x + w * 0.7, y + h); ctx.lineTo(x + w * 0.7, my + h / 4);
-            ctx.lineTo(x, my + h / 4); ctx.closePath();
-          }
-        },
-        'arrow_l': {
-          name: 'Arrow Left', icon: '⬅️', path: (ctx, x, y, w, h) => {
-            const my = y + h / 2;
-            ctx.moveTo(x + w, my - h / 4); ctx.lineTo(x + w * 0.3, my - h / 4); ctx.lineTo(x + w * 0.3, y);
-            ctx.lineTo(x, my); ctx.lineTo(x + w * 0.3, y + h); ctx.lineTo(x + w * 0.3, my + h / 4);
-            ctx.lineTo(x + w, my + h / 4); ctx.closePath();
-          }
-        },
-        'arrow_u': {
-          name: 'Arrow Up', icon: '⬆️', path: (ctx, x, y, w, h) => {
-            const mx = x + w / 2;
-            ctx.moveTo(mx - w / 4, y + h); ctx.lineTo(mx - w / 4, y + h * 0.3); ctx.lineTo(x, y + h * 0.3);
-            ctx.lineTo(mx, y); ctx.lineTo(x + w, y + h * 0.3); ctx.lineTo(mx + w / 4, y + h * 0.3);
-            ctx.lineTo(mx + w / 4, y + h); ctx.closePath();
-          }
-        },
-        'arrow_d': {
-          name: 'Arrow Down', icon: '⬇️', path: (ctx, x, y, w, h) => {
-            const mx = x + w / 2;
-            ctx.moveTo(mx - w / 4, y); ctx.lineTo(mx - w / 4, y + h * 0.7); ctx.lineTo(x, y + h * 0.7);
-            ctx.lineTo(mx, y + h); ctx.lineTo(x + w, y + h * 0.7); ctx.lineTo(mx + w / 4, y + h * 0.7);
-            ctx.lineTo(mx + w / 4, y); ctx.closePath();
-          }
-        },
-        'diamond': {
-          name: 'Diamond', icon: '🔶', path: (ctx, x, y, w, h) => {
-            ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w, y + h / 2); ctx.lineTo(x + w / 2, y + h); ctx.lineTo(x, y + h / 2); ctx.closePath();
-          }
-        },
-        'cloud': {
-          name: 'Cloud', icon: '☁️', path: (ctx, x, y, w, h) => {
-            ctx.arc(x + w * 0.2, y + h * 0.7, w * 0.2, 0, 2 * Math.PI);
-            ctx.arc(x + w * 0.5, y + h * 0.6, w * 0.3, 0, 2 * Math.PI);
-            ctx.arc(x + w * 0.8, y + h * 0.7, w * 0.2, 0, 2 * Math.PI);
-          }
-        },
-        'heart': {
-          name: 'Heart', icon: '❤️', path: (ctx, x, y, w, h) => {
-            const topCurveHeight = h * 0.3;
-            ctx.moveTo(x + w / 2, y + h * 0.2);
-            ctx.bezierCurveTo(x + w / 2, y, x, y, x, y + topCurveHeight);
-            ctx.bezierCurveTo(x, y + (h + topCurveHeight) / 2, x + w / 2, y + h, x + w / 2, y + h);
-            ctx.bezierCurveTo(x + w / 2, y + h, x + w, y + (h + topCurveHeight) / 2, x + w, y + topCurveHeight);
-            ctx.bezierCurveTo(x + w, y, x + w / 2, y, x + w / 2, y + h * 0.2);
-            ctx.closePath();
-          }
-        },
-        'check': {
-          name: 'Check', icon: '✔️', path: (ctx, x, y, w, h) => {
-            ctx.moveTo(x, y + h * 0.5); ctx.lineTo(x + w * 0.4, y + h); ctx.lineTo(x + w, y);
-          }
-        },
-        'cross': {
-          name: 'Cross', icon: '❌', path: (ctx, x, y, w, h) => {
-            ctx.moveTo(x, y); ctx.lineTo(x + w, y + h);
-            ctx.moveTo(x + w, y); ctx.lineTo(x, y + h);
-          }
-        },
-        'thought': {
-          name: 'Thought', icon: '💭', path: (ctx, x, y, w, h) => {
-            ctx.ellipse(x + w * 0.5, y + h * 0.4, w * 0.4, h * 0.3, 0, 0, 2 * Math.PI);
-            ctx.moveTo(x + w * 0.3, y + h * 0.7); ctx.arc(x + w * 0.2, y + h * 0.8, w * 0.05, 0, 2 * Math.PI);
-            ctx.moveTo(x + w * 0.15, y + h * 0.9); ctx.arc(x + w * 0.1, y + h * 0.95, w * 0.03, 0, 2 * Math.PI);
-          }
-        },
-        'cube': {
-          name: 'Cube', icon: '🧊', path: (ctx, x, y, w, h) => {
-            const d = w * 0.25;
-            ctx.rect(x, y + d, w - d, h - d);
-            ctx.moveTo(x, y + d); ctx.lineTo(x + d, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - d, y + d);
-            ctx.moveTo(x + w, y); ctx.lineTo(x + w, y + h - d); ctx.lineTo(x + w - d, y + h);
-          }
-        },
-        'cylinder': {
-          name: 'Cylinder', icon: '🛢️', path: (ctx, x, y, w, h) => {
-            const eh = h * 0.15;
-            ctx.ellipse(x + w / 2, y + eh, w / 2, eh, 0, 0, 2 * Math.PI);
-            ctx.moveTo(x, y + eh); ctx.lineTo(x, y + h - eh);
-            ctx.ellipse(x + w / 2, y + h - eh, w / 2, eh, 0, 0, Math.PI); // Bottom half
-            ctx.lineTo(x + w, y + eh);
-          }
-        },
-        'smiley': {
-          name: 'Smile', icon: '🙂', path: (ctx, x, y, w, h) => {
-            ctx.arc(x + w / 2, y + h / 2, w / 2, 0, 2 * Math.PI); // Face
-            ctx.moveTo(x + w * 0.3, y + h * 0.4); ctx.arc(x + w * 0.3, y + h * 0.4, w * 0.05, 0, 2 * Math.PI); // Eye L
-            ctx.moveTo(x + w * 0.7, y + h * 0.4); ctx.arc(x + w * 0.7, y + h * 0.4, w * 0.05, 0, 2 * Math.PI); // Eye R
-            ctx.moveTo(x + w * 0.2, y + h * 0.6); ctx.bezierCurveTo(x + w * 0.2, y + h * 0.9, x + w * 0.8, y + h * 0.9, x + w * 0.8, y + h * 0.6);
-          }
-        },
-        'parallelogram': {
-          name: 'Parallelogram', icon: '▰', path: (ctx, x, y, w, h) => {
-            const skew = w * 0.2;
-            ctx.moveTo(x + skew, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - skew, y + h); ctx.lineTo(x, y + h); ctx.closePath();
-          }
-        },
-        'trapezoid': {
-          name: 'Trapezoid', icon: '⏢', path: (ctx, x, y, w, h) => {
-            const inset = w * 0.2;
-            ctx.moveTo(x + inset, y); ctx.lineTo(x + w - inset, y); ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h); ctx.closePath();
-          }
-        },
-        'hexagon': {
-          name: 'Hexagon', icon: '⬡', path: (ctx, x, y, w, h) => {
-            const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
-            for (let i = 0; i < 6; i++) {
-              ctx.lineTo(cx + r * Math.cos(i * 2 * Math.PI / 6), cy + r * Math.sin(i * 2 * Math.PI / 6));
-            }
-            ctx.closePath();
-          }
-        },
-        'pentagon': {
-          name: 'Pentagon', icon: '⬠', path: (ctx, x, y, w, h) => {
-            const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
-            for (let i = 0; i < 5; i++) {
-              ctx.lineTo(cx + r * Math.cos(i * 2 * Math.PI / 5 - Math.PI / 2), cy + r * Math.sin(i * 2 * Math.PI / 5 - Math.PI / 2));
-            }
-            ctx.closePath();
-          }
-        },
-        'document': {
-          name: 'Document', icon: '📄', path: (ctx, x, y, w, h) => {
-            const fold = w * 0.3;
-            ctx.moveTo(x, y); ctx.lineTo(x + w - fold, y); ctx.lineTo(x + w, y + fold); ctx.lineTo(x + w, y + h);
-            ctx.lineTo(x, y + h); ctx.closePath();
-            ctx.moveTo(x + w - fold, y); ctx.lineTo(x + w - fold, y + fold); ctx.lineTo(x + w, y + fold);
-          }
-        },
-        'database': {
-          name: 'Database', icon: '🗄️', path: (ctx, x, y, w, h) => {
-            const eh = h * 0.15;
-            ctx.ellipse(x + w / 2, y + eh, w / 2, eh, 0, 0, 2 * Math.PI);
-            ctx.moveTo(x, y + eh); ctx.lineTo(x, y + h - eh);
-            ctx.ellipse(x + w / 2, y + h - eh, w / 2, eh, 0, 0, Math.PI);
-            ctx.lineTo(x + w, y + eh);
-            ctx.moveTo(x, y + h * 0.5); ctx.ellipse(x + w / 2, y + h * 0.5, w / 2, eh, 0, 0, Math.PI);
-          }
-        },
-        'sun': {
-          name: 'Sun', icon: '☀️', path: (ctx, x, y, w, h) => {
-            const cx = x + w / 2, cy = y + h / 2, r = w * 0.25;
-            ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-            for (let i = 0; i < 8; i++) {
-              const angle = i * Math.PI / 4;
-              ctx.moveTo(cx + Math.cos(angle) * r * 1.2, cy + Math.sin(angle) * r * 1.2);
-              ctx.lineTo(cx + Math.cos(angle) * r * 1.8, cy + Math.sin(angle) * r * 1.8);
-            }
-          }
-        },
-        'moon': {
-          name: 'Moon', icon: '🌙', path: (ctx, x, y, w, h) => {
-            ctx.arc(x + w / 2, y + h / 2, w * 0.4, 0, 2 * Math.PI); // Base circle
-            // Simplified clip? Canvas path clip is complex in one stroke.
-            // Just draw a crescent using bezier
-            ctx.moveTo(x + w * 0.5, y + h * 0.1);
-            ctx.bezierCurveTo(x + w, y + h * 0.5, x + w * 0.5, y + h * 0.9, x + w * 0.5, y + h * 0.9);
-            ctx.bezierCurveTo(x + w * 0.8, y + h * 0.5, x + w * 0.5, y + h * 0.1, x + w * 0.5, y + h * 0.1);
-          }
-        },
-        'lightning': {
-          name: 'Lightning', icon: '⚡', path: (ctx, x, y, w, h) => {
-            ctx.moveTo(x + w * 0.6, y); ctx.lineTo(x + w * 0.3, y + h * 0.6); ctx.lineTo(x + w * 0.5, y + h * 0.6);
-            ctx.lineTo(x + w * 0.4, y + h); ctx.lineTo(x + w * 0.7, y + h * 0.4); ctx.lineTo(x + w * 0.5, y + h * 0.4);
-            ctx.closePath();
-          }
-        },
-        'lock': {
-          name: 'Lock', icon: '🔒', path: (ctx, x, y, w, h) => {
-            ctx.rect(x + w * 0.2, y + h * 0.4, w * 0.6, h * 0.6);
-            ctx.moveTo(x + w * 0.3, y + h * 0.4); ctx.arc(x + w * 0.5, y + h * 0.4, w * 0.2, Math.PI, 0);
-          }
-        },
-        'key': {
-          name: 'Key', icon: '🔑', path: (ctx, x, y, w, h) => {
-            ctx.arc(x + w * 0.2, y + h * 0.5, w * 0.2, 0, 2 * Math.PI);
-            ctx.moveTo(x + w * 0.4, y + h * 0.5); ctx.lineTo(x + w * 0.9, y + h * 0.5);
-            ctx.lineTo(x + w * 0.9, y + h * 0.7);
-            ctx.moveTo(x + w * 0.7, y + h * 0.5); ctx.lineTo(x + w * 0.7, y + h * 0.7);
-          }
-        },
-        'envelope': {
-          name: 'Envelope', icon: '✉️', path: (ctx, x, y, w, h) => {
-            ctx.rect(x, y + h * 0.2, w, h * 0.8);
-            ctx.moveTo(x, y + h * 0.2); ctx.lineTo(x + w / 2, y + h * 0.6); ctx.lineTo(x + w, y + h * 0.2);
-          }
-        },
-      };
-
-      let wbState = {
-        id: null,
-        name: "Untitled",
-        tool: 'pen',
-        shapeType: null, // if tool is shape
-        color: '#000000',
-        size: 4,
-        isDrawing: false,
-        startX: 0, startY: 0,
-        history: [], // Elements
-        redoStack: [],
-        canvas: null,
-        ctx: null,
-        container: null
-      };
-
-      // --- Dashboard ---
-      function showWhiteboardDashboard() {
-        document.getElementById('sidebar').classList.add('hidden');
-        if (window.innerWidth <= 768) {
-          document.querySelector('.sidebar').style.display = 'none';
-          document.querySelector('.main-chat').style.display = 'none';
+    // --- State & Constants ---
+    const SHAPES = {
+      'rect': { name: 'Rectangle', icon: '⬜', path: (ctx, x, y, w, h) => ctx.rect(x, y, w, h) },
+      'circle': { name: 'Circle', icon: '⚪', path: (ctx, x, y, w, h) => { ctx.arc(x + w / 2, y + h / 2, Math.abs(w) / 2, 0, 2 * Math.PI); } },
+      'triangle': {
+        name: 'Triangle', icon: '🔺', path: (ctx, x, y, w, h) => {
+          ctx.moveTo(x + w / 2, y); ctx.lineTo(x, y + h); ctx.lineTo(x + w, y + h); ctx.closePath();
         }
-        chatArea.classList.add('hidden');
-        document.getElementById('welcomeScreen').classList.add('hidden');
-        document.getElementById('whiteboardDashboard').classList.remove('hidden');
-        loadWhiteboards();
-      }
-
-      async function loadWhiteboards() {
-        const grid = document.getElementById('wbGrid');
-        grid.innerHTML = '<p>Loading...</p>';
-        try {
-          const boards = await api('/api/whiteboards');
-          grid.innerHTML = '';
-          if (boards.length === 0) {
-            grid.innerHTML = '<p>No whiteboards yet. Create one!</p>';
-            return;
+      },
+      'star': {
+        name: 'Star', icon: '⭐', path: (ctx, x, y, w, h) => {
+          const cx = x + w / 2, cy = y + h / 2, outer = Math.abs(w) / 2, inner = outer / 2;
+          for (let i = 0; i < 5; i++) {
+            ctx.lineTo(cx + Math.cos((18 + i * 72) / 180 * Math.PI) * outer, cy - Math.sin((18 + i * 72) / 180 * Math.PI) * outer);
+            ctx.lineTo(cx + Math.cos((54 + i * 72) / 180 * Math.PI) * inner, cy - Math.sin((54 + i * 72) / 180 * Math.PI) * inner);
           }
-          boards.forEach(b => {
-            const card = document.createElement('div');
-            card.className = 'wb-card';
-            card.innerHTML = `
+          ctx.closePath();
+        }
+      },
+      'arrow_r': {
+        name: 'Arrow Right', icon: '➡️', path: (ctx, x, y, w, h) => {
+          const my = y + h / 2;
+          ctx.moveTo(x, my - h / 4); ctx.lineTo(x + w * 0.7, my - h / 4); ctx.lineTo(x + w * 0.7, y);
+          ctx.lineTo(x + w, my); ctx.lineTo(x + w * 0.7, y + h); ctx.lineTo(x + w * 0.7, my + h / 4);
+          ctx.lineTo(x, my + h / 4); ctx.closePath();
+        }
+      },
+      'arrow_l': {
+        name: 'Arrow Left', icon: '⬅️', path: (ctx, x, y, w, h) => {
+          const my = y + h / 2;
+          ctx.moveTo(x + w, my - h / 4); ctx.lineTo(x + w * 0.3, my - h / 4); ctx.lineTo(x + w * 0.3, y);
+          ctx.lineTo(x, my); ctx.lineTo(x + w * 0.3, y + h); ctx.lineTo(x + w * 0.3, my + h / 4);
+          ctx.lineTo(x + w, my + h / 4); ctx.closePath();
+        }
+      },
+      'arrow_u': {
+        name: 'Arrow Up', icon: '⬆️', path: (ctx, x, y, w, h) => {
+          const mx = x + w / 2;
+          ctx.moveTo(mx - w / 4, y + h); ctx.lineTo(mx - w / 4, y + h * 0.3); ctx.lineTo(x, y + h * 0.3);
+          ctx.lineTo(mx, y); ctx.lineTo(x + w, y + h * 0.3); ctx.lineTo(mx + w / 4, y + h * 0.3);
+          ctx.lineTo(mx + w / 4, y + h); ctx.closePath();
+        }
+      },
+      'arrow_d': {
+        name: 'Arrow Down', icon: '⬇️', path: (ctx, x, y, w, h) => {
+          const mx = x + w / 2;
+          ctx.moveTo(mx - w / 4, y); ctx.lineTo(mx - w / 4, y + h * 0.7); ctx.lineTo(x, y + h * 0.7);
+          ctx.lineTo(mx, y + h); ctx.lineTo(x + w, y + h * 0.7); ctx.lineTo(mx + w / 4, y + h * 0.7);
+          ctx.lineTo(mx + w / 4, y); ctx.closePath();
+        }
+      },
+      'diamond': {
+        name: 'Diamond', icon: '🔶', path: (ctx, x, y, w, h) => {
+          ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w, y + h / 2); ctx.lineTo(x + w / 2, y + h); ctx.lineTo(x, y + h / 2); ctx.closePath();
+        }
+      },
+      'cloud': {
+        name: 'Cloud', icon: '☁️', path: (ctx, x, y, w, h) => {
+          ctx.arc(x + w * 0.2, y + h * 0.7, w * 0.2, 0, 2 * Math.PI);
+          ctx.arc(x + w * 0.5, y + h * 0.6, w * 0.3, 0, 2 * Math.PI);
+          ctx.arc(x + w * 0.8, y + h * 0.7, w * 0.2, 0, 2 * Math.PI);
+        }
+      },
+      'heart': {
+        name: 'Heart', icon: '❤️', path: (ctx, x, y, w, h) => {
+          const topCurveHeight = h * 0.3;
+          ctx.moveTo(x + w / 2, y + h * 0.2);
+          ctx.bezierCurveTo(x + w / 2, y, x, y, x, y + topCurveHeight);
+          ctx.bezierCurveTo(x, y + (h + topCurveHeight) / 2, x + w / 2, y + h, x + w / 2, y + h);
+          ctx.bezierCurveTo(x + w / 2, y + h, x + w, y + (h + topCurveHeight) / 2, x + w, y + topCurveHeight);
+          ctx.bezierCurveTo(x + w, y, x + w / 2, y, x + w / 2, y + h * 0.2);
+          ctx.closePath();
+        }
+      },
+      'check': {
+        name: 'Check', icon: '✔️', path: (ctx, x, y, w, h) => {
+          ctx.moveTo(x, y + h * 0.5); ctx.lineTo(x + w * 0.4, y + h); ctx.lineTo(x + w, y);
+        }
+      },
+      'cross': {
+        name: 'Cross', icon: '❌', path: (ctx, x, y, w, h) => {
+          ctx.moveTo(x, y); ctx.lineTo(x + w, y + h);
+          ctx.moveTo(x + w, y); ctx.lineTo(x, y + h);
+        }
+      },
+      'thought': {
+        name: 'Thought', icon: '💭', path: (ctx, x, y, w, h) => {
+          ctx.ellipse(x + w * 0.5, y + h * 0.4, w * 0.4, h * 0.3, 0, 0, 2 * Math.PI);
+          ctx.moveTo(x + w * 0.3, y + h * 0.7); ctx.arc(x + w * 0.2, y + h * 0.8, w * 0.05, 0, 2 * Math.PI);
+          ctx.moveTo(x + w * 0.15, y + h * 0.9); ctx.arc(x + w * 0.1, y + h * 0.95, w * 0.03, 0, 2 * Math.PI);
+        }
+      },
+      'cube': {
+        name: 'Cube', icon: '🧊', path: (ctx, x, y, w, h) => {
+          const d = w * 0.25;
+          ctx.rect(x, y + d, w - d, h - d);
+          ctx.moveTo(x, y + d); ctx.lineTo(x + d, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - d, y + d);
+          ctx.moveTo(x + w, y); ctx.lineTo(x + w, y + h - d); ctx.lineTo(x + w - d, y + h);
+        }
+      },
+      'cylinder': {
+        name: 'Cylinder', icon: '🛢️', path: (ctx, x, y, w, h) => {
+          const eh = h * 0.15;
+          ctx.ellipse(x + w / 2, y + eh, w / 2, eh, 0, 0, 2 * Math.PI);
+          ctx.moveTo(x, y + eh); ctx.lineTo(x, y + h - eh);
+          ctx.ellipse(x + w / 2, y + h - eh, w / 2, eh, 0, 0, Math.PI); // Bottom half
+          ctx.lineTo(x + w, y + eh);
+        }
+      },
+      'smiley': {
+        name: 'Smile', icon: '🙂', path: (ctx, x, y, w, h) => {
+          ctx.arc(x + w / 2, y + h / 2, w / 2, 0, 2 * Math.PI); // Face
+          ctx.moveTo(x + w * 0.3, y + h * 0.4); ctx.arc(x + w * 0.3, y + h * 0.4, w * 0.05, 0, 2 * Math.PI); // Eye L
+          ctx.moveTo(x + w * 0.7, y + h * 0.4); ctx.arc(x + w * 0.7, y + h * 0.4, w * 0.05, 0, 2 * Math.PI); // Eye R
+          ctx.moveTo(x + w * 0.2, y + h * 0.6); ctx.bezierCurveTo(x + w * 0.2, y + h * 0.9, x + w * 0.8, y + h * 0.9, x + w * 0.8, y + h * 0.6);
+        }
+      },
+      'parallelogram': {
+        name: 'Parallelogram', icon: '▰', path: (ctx, x, y, w, h) => {
+          const skew = w * 0.2;
+          ctx.moveTo(x + skew, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - skew, y + h); ctx.lineTo(x, y + h); ctx.closePath();
+        }
+      },
+      'trapezoid': {
+        name: 'Trapezoid', icon: '⏢', path: (ctx, x, y, w, h) => {
+          const inset = w * 0.2;
+          ctx.moveTo(x + inset, y); ctx.lineTo(x + w - inset, y); ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h); ctx.closePath();
+        }
+      },
+      'hexagon': {
+        name: 'Hexagon', icon: '⬡', path: (ctx, x, y, w, h) => {
+          const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
+          for (let i = 0; i < 6; i++) {
+            ctx.lineTo(cx + r * Math.cos(i * 2 * Math.PI / 6), cy + r * Math.sin(i * 2 * Math.PI / 6));
+          }
+          ctx.closePath();
+        }
+      },
+      'pentagon': {
+        name: 'Pentagon', icon: '⬠', path: (ctx, x, y, w, h) => {
+          const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
+          for (let i = 0; i < 5; i++) {
+            ctx.lineTo(cx + r * Math.cos(i * 2 * Math.PI / 5 - Math.PI / 2), cy + r * Math.sin(i * 2 * Math.PI / 5 - Math.PI / 2));
+          }
+          ctx.closePath();
+        }
+      },
+      'document': {
+        name: 'Document', icon: '📄', path: (ctx, x, y, w, h) => {
+          const fold = w * 0.3;
+          ctx.moveTo(x, y); ctx.lineTo(x + w - fold, y); ctx.lineTo(x + w, y + fold); ctx.lineTo(x + w, y + h);
+          ctx.lineTo(x, y + h); ctx.closePath();
+          ctx.moveTo(x + w - fold, y); ctx.lineTo(x + w - fold, y + fold); ctx.lineTo(x + w, y + fold);
+        }
+      },
+      'database': {
+        name: 'Database', icon: '🗄️', path: (ctx, x, y, w, h) => {
+          const eh = h * 0.15;
+          ctx.ellipse(x + w / 2, y + eh, w / 2, eh, 0, 0, 2 * Math.PI);
+          ctx.moveTo(x, y + eh); ctx.lineTo(x, y + h - eh);
+          ctx.ellipse(x + w / 2, y + h - eh, w / 2, eh, 0, 0, Math.PI);
+          ctx.lineTo(x + w, y + eh);
+          ctx.moveTo(x, y + h * 0.5); ctx.ellipse(x + w / 2, y + h * 0.5, w / 2, eh, 0, 0, Math.PI);
+        }
+      },
+      'sun': {
+        name: 'Sun', icon: '☀️', path: (ctx, x, y, w, h) => {
+          const cx = x + w / 2, cy = y + h / 2, r = w * 0.25;
+          ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+          for (let i = 0; i < 8; i++) {
+            const angle = i * Math.PI / 4;
+            ctx.moveTo(cx + Math.cos(angle) * r * 1.2, cy + Math.sin(angle) * r * 1.2);
+            ctx.lineTo(cx + Math.cos(angle) * r * 1.8, cy + Math.sin(angle) * r * 1.8);
+          }
+        }
+      },
+      'moon': {
+        name: 'Moon', icon: '🌙', path: (ctx, x, y, w, h) => {
+          ctx.arc(x + w / 2, y + h / 2, w * 0.4, 0, 2 * Math.PI); // Base circle
+          // Simplified clip? Canvas path clip is complex in one stroke.
+          // Just draw a crescent using bezier
+          ctx.moveTo(x + w * 0.5, y + h * 0.1);
+          ctx.bezierCurveTo(x + w, y + h * 0.5, x + w * 0.5, y + h * 0.9, x + w * 0.5, y + h * 0.9);
+          ctx.bezierCurveTo(x + w * 0.8, y + h * 0.5, x + w * 0.5, y + h * 0.1, x + w * 0.5, y + h * 0.1);
+        }
+      },
+      'lightning': {
+        name: 'Lightning', icon: '⚡', path: (ctx, x, y, w, h) => {
+          ctx.moveTo(x + w * 0.6, y); ctx.lineTo(x + w * 0.3, y + h * 0.6); ctx.lineTo(x + w * 0.5, y + h * 0.6);
+          ctx.lineTo(x + w * 0.4, y + h); ctx.lineTo(x + w * 0.7, y + h * 0.4); ctx.lineTo(x + w * 0.5, y + h * 0.4);
+          ctx.closePath();
+        }
+      },
+      'lock': {
+        name: 'Lock', icon: '🔒', path: (ctx, x, y, w, h) => {
+          ctx.rect(x + w * 0.2, y + h * 0.4, w * 0.6, h * 0.6);
+          ctx.moveTo(x + w * 0.3, y + h * 0.4); ctx.arc(x + w * 0.5, y + h * 0.4, w * 0.2, Math.PI, 0);
+        }
+      },
+      'key': {
+        name: 'Key', icon: '🔑', path: (ctx, x, y, w, h) => {
+          ctx.arc(x + w * 0.2, y + h * 0.5, w * 0.2, 0, 2 * Math.PI);
+          ctx.moveTo(x + w * 0.4, y + h * 0.5); ctx.lineTo(x + w * 0.9, y + h * 0.5);
+          ctx.lineTo(x + w * 0.9, y + h * 0.7);
+          ctx.moveTo(x + w * 0.7, y + h * 0.5); ctx.lineTo(x + w * 0.7, y + h * 0.7);
+        }
+      },
+      'envelope': {
+        name: 'Envelope', icon: '✉️', path: (ctx, x, y, w, h) => {
+          ctx.rect(x, y + h * 0.2, w, h * 0.8);
+          ctx.moveTo(x, y + h * 0.2); ctx.lineTo(x + w / 2, y + h * 0.6); ctx.lineTo(x + w, y + h * 0.2);
+        }
+      },
+    };
+
+    let wbState = {
+      id: null,
+      name: "Untitled",
+      tool: 'pen',
+      shapeType: null, // if tool is shape
+      color: '#000000',
+      size: 4,
+      isDrawing: false,
+      startX: 0, startY: 0,
+      history: [], // Elements
+      redoStack: [],
+      canvas: null,
+      ctx: null,
+      container: null
+    };
+
+    // --- Dashboard ---
+    function showWhiteboardDashboard() {
+      document.getElementById('sidebar').classList.add('hidden');
+      if (window.innerWidth <= 768) {
+        document.querySelector('.sidebar').style.display = 'none';
+        document.querySelector('.main-chat').style.display = 'none';
+      }
+      chatArea.classList.add('hidden');
+      document.getElementById('welcomeScreen').classList.add('hidden');
+      document.getElementById('whiteboardDashboard').classList.remove('hidden');
+      loadWhiteboards();
+    }
+
+    async function loadWhiteboards() {
+      const grid = document.getElementById('wbGrid');
+      grid.innerHTML = '<p>Loading...</p>';
+      try {
+        const boards = await api('/api/whiteboards');
+        grid.innerHTML = '';
+        if (boards.length === 0) {
+          grid.innerHTML = '<p>No whiteboards yet. Create one!</p>';
+          return;
+        }
+        boards.forEach(b => {
+          const card = document.createElement('div');
+          card.className = 'wb-card';
+          card.innerHTML = `
                     <div class="wb-thumbnail">${b.thumbnail ? '<img src="' + b.thumbnail + '" style="width:100%;height:100%;object-fit:cover;">' : '🎨'}</div>
                     <div class="wb-title">${b.name}</div>
                     <div class="wb-date">${new Date(b.updated_at).toLocaleDateString()}</div>
                     <button onclick="deleteWhiteboard(event, ${b.id})" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border-radius:50%; width:24px; height:24px; display:flex; 
                     align-items:center; justify-content:center; border:none;">✕</button>
                 `;
-            card.onclick = (e) => {
-              if (e.target.tagName === 'BUTTON') return;
-              openWhiteboardStandalone(b.id);
-            };
-            grid.appendChild(card);
-          });
-        } catch (e) {
-          grid.innerHTML = '<p style="color:red">Failed to load whiteboards</p>';
-        }
-      }
-
-      async function createNewWhiteboard() {
-        try {
-          const res = await api('/api/whiteboards', {
-            method: 'POST',
-            body: JSON.stringify({ name: "Untitled Whiteboard" })
-          });
-          openWhiteboardStandalone(res.id);
-        } catch (e) {
-          alert("Error creating whiteboard: " + e.message);
-        }
-      }
-
-      async function deleteWhiteboard(e, id) {
-        e.stopPropagation();
-        if (!confirm("Delete this whiteboard?")) return;
-        try {
-          await api(`/api/whiteboards/${id}`, { method: 'DELETE' });
-          loadWhiteboards();
-        } catch (e) {
-          alert("Failed to delete");
-        }
-      }
-
-      // --- UI & Interaction ---
-      async function openWhiteboardStandalone(id) {
-        try {
-          const data = await api(`/api/whiteboards/${id}`);
-          wbState.id = data.id;
-          wbState.name = data.name;
-          wbState.history = data.data ? JSON.parse(data.data) : [];
-          wbState.redoStack = [];
-
-          document.getElementById('wbTitle').value = wbState.name;
-          document.getElementById('whiteboardUI').classList.remove('hidden');
-
-          initWhiteboardCanvas();
-          redrawCanvas();
-          renderShapePicker();
-        } catch (e) {
-          alert("Failed to open whiteboard: " + e.message);
-        }
-      }
-
-      function initWhiteboardCanvas() {
-        wbState.container = document.getElementById('wbCanvasContainer');
-        wbState.canvas = document.getElementById('wbCanvasNew');
-        wbState.ctx = wbState.canvas.getContext('2d');
-        wbState.canvas.width = 3000;
-        wbState.canvas.height = 3000;
-
-        const cvs = wbState.canvas;
-        cvs.addEventListener('mousedown', wbStart);
-        cvs.addEventListener('mousemove', wbMove);
-        cvs.addEventListener('mouseup', wbEnd);
-        cvs.addEventListener('mouseout', wbEnd);
-
-        cvs.addEventListener('touchstart', (e) => {
-          if (wbState.tool === 'pen' || wbState.tool === 'eraser') e.preventDefault();
-          wbStart(e.touches[0]);
-        });
-        cvs.addEventListener('touchmove', (e) => {
-          if (wbState.tool === 'pen' || wbState.tool === 'eraser') e.preventDefault();
-          wbMove(e.touches[0]);
-        });
-        cvs.addEventListener('touchend', wbEnd);
-      }
-
-      function closeWhiteboardUI() {
-        document.getElementById('whiteboardUI').classList.add('hidden');
-        loadWhiteboards();
-      }
-
-      function wbGetPos(e) {
-        const rect = wbState.canvas.getBoundingClientRect();
-        return {
-          x: (e.clientX - rect.left) * (wbState.canvas.width / rect.width),
-          y: (e.clientY - rect.top) * (wbState.canvas.height / rect.height)
-        };
-      }
-
-      function wbStart(e) {
-        if (e.target.id === 'wbTextInput') return; // Don't trigger on input click
-        wbState.isDrawing = true;
-        const pos = wbGetPos(e);
-        wbState.startX = pos.x;
-        wbState.startY = pos.y;
-
-        if (wbState.tool === 'select') {
-          const hit = wbHitTest(pos.x, pos.y);
-          if (hit) {
-            wbState.selection = hit;
-            wbState.isDragging = true;
-            // Bring to front (optional, but good UX)
-            // wbState.history.splice(wbState.history.indexOf(hit), 1);
-            // wbState.history.push(hit);
-          } else {
-            wbState.selection = null;
-          }
-          redrawCanvas(); // To show selection highlight
-        } else if (wbState.tool === 'text') {
-          const rect = wbState.canvas.getBoundingClientRect();
-          const cssX = e.clientX - rect.left;
-          const cssY = e.clientY - rect.top;
-          wbShowTextInput(cssX, cssY, pos.x, pos.y);
-          wbState.isDrawing = false; // Text is managed by input now
-        } else if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
-          wbState.currentPath = {
-            type: 'path',
-            points: [{ x: pos.x, y: pos.y }],
-            color: wbState.tool === 'eraser' ? '#ffffff' : wbState.color,
-            size: wbState.tool === 'eraser' ? wbState.size * 5 : wbState.size,
-            isEraser: wbState.tool === 'eraser'
+          card.onclick = (e) => {
+            if (e.target.tagName === 'BUTTON') return;
+            openWhiteboardStandalone(b.id);
           };
-        }
-      }
-
-      function wbMove(e) {
-        if (!wbState.isDrawing && !wbState.isDragging) return;
-        const pos = wbGetPos(e);
-
-        if (wbState.tool === 'select' && wbState.selection && wbState.isDragging) {
-          const dx = pos.x - wbState.startX;
-          const dy = pos.y - wbState.startY;
-
-          const item = wbState.selection;
-          if (item.type === 'path') {
-            item.points.forEach(p => { p.x += dx; p.y += dy; });
-          } else {
-            item.x += dx;
-            item.y += dy;
-          }
-
-          wbState.startX = pos.x;
-          wbState.startY = pos.y;
-          redrawCanvas();
-          return;
-        }
-
-        if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
-          wbState.currentPath.points.push({ x: pos.x, y: pos.y }); // ... existing logic
-          // Inline Redraw Optimization
-          const ctx = wbState.ctx;
-          ctx.beginPath();
-          const pts = wbState.currentPath.points;
-          if (pts.length > 1) {
-            ctx.moveTo(pts[pts.length - 2].x, pts[pts.length - 2].y);
-            ctx.lineTo(pos.x, pos.y);
-
-            if (wbState.tool === 'eraser') {
-              ctx.globalCompositeOperation = 'destination-out';
-              ctx.strokeStyle = 'rgba(0,0,0,1)';
-            } else {
-              ctx.globalCompositeOperation = 'source-over';
-              ctx.strokeStyle = wbState.currentPath.color;
-            }
-
-            ctx.lineWidth = wbState.currentPath.size;
-            ctx.lineCap = 'round';
-            ctx.stroke();
-            ctx.globalCompositeOperation = 'source-over';
-          }
-        }
-        // ... (shape logic remains same, but need to bring it here if replacing whole block)
-        else if (wbState.tool === 'shape') {
-          redrawCanvas();
-          const ctx = wbState.ctx;
-          ctx.beginPath();
-          ctx.strokeStyle = wbState.color;
-          ctx.lineWidth = wbState.size;
-          const w = pos.x - wbState.startX;
-          const h = pos.y - wbState.startY;
-          const def = SHAPES[wbState.shapeType];
-          if (def) { def.path(ctx, wbState.startX, wbState.startY, w, h); ctx.stroke(); }
-        }
-      }
-
-      function wbEnd(e) {
-        if (wbState.isDragging) {
-          wbState.isDragging = false;
-          saveWhiteboard(true);
-          return;
-        }
-        if (!wbState.isDrawing) return;
-        wbState.isDrawing = false;
-
-        if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
-          wbState.history.push(wbState.currentPath);
-        } else if (wbState.tool === 'shape') {
-          // ... existing shape end logic
-          let pos; try { pos = wbGetPos(e); } catch (ex) { return; }
-          const w = pos.x - wbState.startX;
-          const h = pos.y - wbState.startY;
-          if (Math.abs(w) > 5 || Math.abs(h) > 5) {
-            wbState.history.push({
-              type: 'shape', shape: wbState.shapeType,
-              x: wbState.startX, y: wbState.startY, w: w, h: h,
-              color: wbState.color, size: wbState.size
-            });
-          }
-          redrawCanvas();
-        }
-        saveWhiteboard(true);
-      }
-
-      // --- Helpers for Text & Select ---
-      function wbHitTest(x, y) {
-        // Iterate backwards
-        for (let i = wbState.history.length - 1; i >= 0; i--) {
-          const item = wbState.history[i];
-          if (item.type === 'text') {
-            // Approximate text box
-            const fontSize = item.size * 3;
-            const width = item.text.length * fontSize * 0.6;
-            const height = fontSize;
-            if (x >= item.x && x <= item.x + width && y >= item.y - height && y <= item.y) {
-              return item;
-            }
-          } else if (item.type === 'shape') {
-            const minX = Math.min(item.x, item.x + item.w);
-            const maxX = Math.max(item.x, item.x + item.w);
-            const minY = Math.min(item.y, item.y + item.h);
-            const maxY = Math.max(item.y, item.y + item.h);
-            if (x >= minX && x <= maxX && y >= minY && y <= maxY) return item;
-          } else if (item.type === 'path') {
-            // Simple bounding box for paths
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            item.points.forEach(p => {
-              if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
-              if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
-            });
-            // Add padding
-            const pad = item.size + 5;
-            if (x >= minX - pad && x <= maxX + pad && y >= minY - pad && y <= maxY + pad) return item;
-          }
-        }
-        return null;
-      }
-
-      function wbShowTextInput(cssX, cssY, canvasX, canvasY, val = '') {
-        const input = document.getElementById('wbTextInput');
-        input.style.display = 'block';
-
-        // Calculate screen coordinates
-        // Since input is now in .wb-ui (fixed), we need page/client coordinates
-        // cssX/Y passed from wbStart are relative to CANVAS container.
-        // We need to add the offset of the canvas container.
-        const rect = document.getElementById('wbCanvasNew').getBoundingClientRect();
-        const left = rect.left + cssX;
-        const top = rect.top + cssY;
-
-        input.style.left = left + 'px';
-        input.style.top = (top - 12) + 'px';
-
-        input.value = val;
-        // Style match
-        input.style.fontSize = (wbState.size * 3) + 'px';
-        input.style.color = wbState.color;
-        input.focus();
-
-        // Store creating pos (Internal Canvas Coords)
-        wbState.textX = canvasX;
-        wbState.textY = canvasY;
-      }
-
-      function commitText() {
-        const input = document.getElementById('wbTextInput');
-        if (input.style.display === 'none') return;
-        const text = input.value;
-        if (text) {
-          wbState.history.push({
-            type: 'text',
-            x: wbState.textX,
-            y: wbState.textY,
-            text: text,
-            color: wbState.color,
-            size: wbState.size * 5 // Align scale logic
-          });
-          redrawCanvas();
-          saveWhiteboard(true);
-        }
-        input.style.display = 'none';
-        input.value = '';
-      }
-
-      function handleTextKey(e) {
-        if (e.key === 'Enter') {
-          commitText();
-        } else if (e.key === 'Escape') {
-          document.getElementById('wbTextInput').style.display = 'none';
-        }
-      }
-
-      // Global Key Listener for Delete
-      window.addEventListener('keydown', (e) => {
-        // Only if whiteboard is visible
-        if (document.getElementById('whiteboardUI').classList.contains('hidden')) return;
-
-        // If typing in text input, don't delete
-        if (document.getElementById('wbTextInput').style.display === 'block') return;
-        if (e.target.tagName === 'INPUT') return; // Don't delete when typing in title
-
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-          if (wbState.selection) {
-            const index = wbState.history.indexOf(wbState.selection);
-            if (index > -1) {
-              wbState.history.splice(index, 1);
-              wbState.selection = null;
-              redrawCanvas();
-              saveWhiteboard(true);
-            }
-          }
-        }
-      });
-
-      function redrawCanvas() {
-        const ctx = wbState.ctx;
-        ctx.clearRect(0, 0, wbState.canvas.width, wbState.canvas.height);
-
-        wbState.history.forEach(action => {
-          ctx.beginPath();
-          ctx.globalCompositeOperation = 'source-over';
-
-          // Highlight selection
-          if (wbState.selection === action) {
-            ctx.shadowColor = 'cyan';
-            ctx.shadowBlur = 10;
-          } else {
-            ctx.shadowBlur = 0;
-          }
-
-          if (action.type === 'path') {
-            if (action.isEraser) {
-              ctx.globalCompositeOperation = 'destination-out';
-              ctx.strokeStyle = 'rgba(0,0,0,1)';
-            } else {
-              ctx.strokeStyle = action.color;
-            }
-            ctx.lineWidth = action.size;
-            ctx.lineCap = 'round';
-            if (action.points.length > 0) {
-              ctx.moveTo(action.points[0].x, action.points[0].y);
-              for (let i = 1; i < action.points.length; i++) {
-                ctx.lineTo(action.points[i].x, action.points[i].y);
-              }
-            }
-            ctx.stroke();
-          } else if (action.type === 'shape') {
-            ctx.strokeStyle = action.color;
-            ctx.lineWidth = action.size;
-            const def = SHAPES[action.shape];
-            if (def) def.path(ctx, action.x, action.y, action.w, action.h);
-            ctx.stroke();
-          } else if (action.type === 'text') {
-            ctx.fillStyle = action.color;
-            ctx.font = `${action.size * 3}px sans-serif`; // Consistent font sizing
-            ctx.fillText(action.text, action.x, action.y);
-          }
-          ctx.shadowBlur = 0; // Reset
+          grid.appendChild(card);
         });
-        ctx.globalCompositeOperation = 'source-over';
+      } catch (e) {
+        grid.innerHTML = '<p style="color:red">Failed to load whiteboards</p>';
       }
+    }
 
-      // --- Toolbar ---
-      function setTool(tool) {
-        wbState.tool = tool;
-        document.querySelectorAll('.wb-tool-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`tool-${tool === 'shape' ? 'shapes' : tool}`).classList.add('active');
-
-        if (tool !== 'shape') document.getElementById('wbShapePicker').style.display = 'none';
-      }
-
-      function setColor(c) { wbState.color = c; }
-      function setSize(s) { wbState.size = s; }
-
-      function toggleShapePicker() {
-        const p = document.getElementById('wbShapePicker');
-        p.style.display = p.style.display === 'grid' ? 'none' : 'grid';
-      }
-
-      function setShape(shape) {
-        wbState.tool = 'shape';
-        wbState.shapeType = shape;
-        document.querySelectorAll('.wb-tool-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('tool-shapes').classList.add('active');
-        toggleShapePicker();
-      }
-
-      function renderShapePicker() {
-        const picker = document.getElementById('wbShapePicker');
-        picker.innerHTML = '';
-        Object.keys(SHAPES).forEach(k => {
-          const div = document.createElement('div');
-          div.className = 'wb-shape-item';
-          div.innerHTML = `<span style="font-size:1.5rem;">${SHAPES[k].icon}</span>`;
-          div.title = SHAPES[k].name;
-          div.onclick = () => setShape(k);
-          picker.appendChild(div);
+    async function createNewWhiteboard() {
+      try {
+        const res = await api('/api/whiteboards', {
+          method: 'POST',
+          body: JSON.stringify({ name: "Untitled Whiteboard" })
         });
+        openWhiteboardStandalone(res.id);
+      } catch (e) {
+        alert("Error creating whiteboard: " + e.message);
       }
+    }
 
-      // --- Listener Setup ---
-      function setupWhiteboardListeners() {
-        const canvas = document.getElementById('wbCanvasNew');
-        if (!canvas) return;
-
-        // Mouse Events
-        canvas.addEventListener('mousedown', wbStart);
-        canvas.addEventListener('mousemove', wbMove);
-        canvas.addEventListener('mouseup', wbEnd);
-        canvas.addEventListener('mouseleave', wbEnd);
-
-        // Touch Events
-        canvas.addEventListener('touchstart', wbStart, { passive: false });
-        canvas.addEventListener('touchmove', wbMove, { passive: false });
-        canvas.addEventListener('touchend', wbEnd);
+    async function deleteWhiteboard(e, id) {
+      e.stopPropagation();
+      if (!confirm("Delete this whiteboard?")) return;
+      try {
+        await api(`/api/whiteboards/${id}`, { method: 'DELETE' });
+        loadWhiteboards();
+      } catch (e) {
+        alert("Failed to delete");
       }
+    }
 
-      // Open Whiteboard in Chat Context
-      async function openChatWhiteboard() {
-        if (!currentChatId) return;
-
-        // Reset state for new session
-        wbState.history = [];
+    // --- UI & Interaction ---
+    async function openWhiteboardStandalone(id) {
+      try {
+        const data = await api(`/api/whiteboards/${id}`);
+        wbState.id = data.id;
+        wbState.name = data.name;
+        wbState.history = data.data ? JSON.parse(data.data) : [];
         wbState.redoStack = [];
-        wbState.name = currentChatName ? `Whiteboard: ${currentChatName}` : "Chat Whiteboard";
 
         document.getElementById('wbTitle').value = wbState.name;
         document.getElementById('whiteboardUI').classList.remove('hidden');
 
-        setupWhiteboardListeners();
+        initWhiteboardCanvas();
+        redrawCanvas();
+        renderShapePicker();
+      } catch (e) {
+        alert("Failed to open whiteboard: " + e.message);
+      }
+    }
 
-        // Request latest state from peers
-        if (socket) {
-          socket.emit('whiteboard_request_state', {
-            chat_type: currentChatType,
-            chat_id: currentChatId
-          });
+    function initWhiteboardCanvas() {
+      wbState.container = document.getElementById('wbCanvasContainer');
+      wbState.canvas = document.getElementById('wbCanvasNew');
+      wbState.ctx = wbState.canvas.getContext('2d');
+      wbState.canvas.width = 3000;
+      wbState.canvas.height = 3000;
+
+      const cvs = wbState.canvas;
+      cvs.addEventListener('mousedown', wbStart);
+      cvs.addEventListener('mousemove', wbMove);
+      cvs.addEventListener('mouseup', wbEnd);
+      cvs.addEventListener('mouseout', wbEnd);
+
+      cvs.addEventListener('touchstart', (e) => {
+        if (wbState.tool === 'pen' || wbState.tool === 'eraser') e.preventDefault();
+        wbStart(e.touches[0]);
+      });
+      cvs.addEventListener('touchmove', (e) => {
+        if (wbState.tool === 'pen' || wbState.tool === 'eraser') e.preventDefault();
+        wbMove(e.touches[0]);
+      });
+      cvs.addEventListener('touchend', wbEnd);
+    }
+
+    function closeWhiteboardUI() {
+      document.getElementById('whiteboardUI').classList.add('hidden');
+      loadWhiteboards();
+    }
+
+    function wbGetPos(e) {
+      const rect = wbState.canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (wbState.canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (wbState.canvas.height / rect.height)
+      };
+    }
+
+    function wbStart(e) {
+      if (e.target.id === 'wbTextInput') return; // Don't trigger on input click
+      wbState.isDrawing = true;
+      const pos = wbGetPos(e);
+      wbState.startX = pos.x;
+      wbState.startY = pos.y;
+
+      if (wbState.tool === 'select') {
+        const hit = wbHitTest(pos.x, pos.y);
+        if (hit) {
+          wbState.selection = hit;
+          wbState.isDragging = true;
+          // Bring to front (optional, but good UX)
+          // wbState.history.splice(wbState.history.indexOf(hit), 1);
+          // wbState.history.push(hit);
+        } else {
+          wbState.selection = null;
         }
+        redrawCanvas(); // To show selection highlight
+      } else if (wbState.tool === 'text') {
+        const rect = wbState.canvas.getBoundingClientRect();
+        const cssX = e.clientX - rect.left;
+        const cssY = e.clientY - rect.top;
+        wbShowTextInput(cssX, cssY, pos.x, pos.y);
+        wbState.isDrawing = false; // Text is managed by input now
+      } else if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
+        wbState.currentPath = {
+          type: 'path',
+          points: [{ x: pos.x, y: pos.y }],
+          color: wbState.tool === 'eraser' ? '#ffffff' : wbState.color,
+          size: wbState.tool === 'eraser' ? wbState.size * 5 : wbState.size,
+          isEraser: wbState.tool === 'eraser'
+        };
+      }
+    }
+
+    function wbMove(e) {
+      if (!wbState.isDrawing && !wbState.isDragging) return;
+      const pos = wbGetPos(e);
+
+      if (wbState.tool === 'select' && wbState.selection && wbState.isDragging) {
+        const dx = pos.x - wbState.startX;
+        const dy = pos.y - wbState.startY;
+
+        const item = wbState.selection;
+        if (item.type === 'path') {
+          item.points.forEach(p => { p.x += dx; p.y += dy; });
+        } else {
+          item.x += dx;
+          item.y += dy;
+        }
+
+        wbState.startX = pos.x;
+        wbState.startY = pos.y;
+        redrawCanvas();
+        return;
       }
 
-      // Call this when opening WB (Standalone)
-      const originalOpenWB = openWhiteboardStandalone;
-      openWhiteboardStandalone = async function (id) {
-        await originalOpenWB(id);
+      if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
+        wbState.currentPath.points.push({ x: pos.x, y: pos.y }); // ... existing logic
+        // Inline Redraw Optimization
+        const ctx = wbState.ctx;
+        ctx.beginPath();
+        const pts = wbState.currentPath.points;
+        if (pts.length > 1) {
+          ctx.moveTo(pts[pts.length - 2].x, pts[pts.length - 2].y);
+          ctx.lineTo(pos.x, pos.y);
 
-        // Ensure state is initialized
-        wbState.canvas = document.getElementById('wbCanvasNew');
-        wbState.ctx = wbState.canvas.getContext('2d');
-        wbState.container = document.getElementById('wbCanvasContainer');
+          if (wbState.tool === 'eraser') {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(0,0,0,1)';
+          } else {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = wbState.currentPath.color;
+          }
 
-        setupWhiteboardListeners();
-      };
+          ctx.lineWidth = wbState.currentPath.size;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+          ctx.globalCompositeOperation = 'source-over';
+        }
+      }
+      // ... (shape logic remains same, but need to bring it here if replacing whole block)
+      else if (wbState.tool === 'shape') {
+        redrawCanvas();
+        const ctx = wbState.ctx;
+        ctx.beginPath();
+        ctx.strokeStyle = wbState.color;
+        ctx.lineWidth = wbState.size;
+        const w = pos.x - wbState.startX;
+        const h = pos.y - wbState.startY;
+        const def = SHAPES[wbState.shapeType];
+        if (def) { def.path(ctx, wbState.startX, wbState.startY, w, h); ctx.stroke(); }
+      }
+    }
 
-      // Auto-init for standalone dev/testing if needed, or just rely on open.
-      // Better: init on load if element exists
+    function wbEnd(e) {
+      if (wbState.isDragging) {
+        wbState.isDragging = false;
+        saveWhiteboard(true);
+        return;
+      }
+      if (!wbState.isDrawing) return;
+      wbState.isDrawing = false;
+
+      if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
+        wbState.history.push(wbState.currentPath);
+      } else if (wbState.tool === 'shape') {
+        // ... existing shape end logic
+        let pos; try { pos = wbGetPos(e); } catch (ex) { return; }
+        const w = pos.x - wbState.startX;
+        const h = pos.y - wbState.startY;
+        if (Math.abs(w) > 5 || Math.abs(h) > 5) {
+          wbState.history.push({
+            type: 'shape', shape: wbState.shapeType,
+            x: wbState.startX, y: wbState.startY, w: w, h: h,
+            color: wbState.color, size: wbState.size
+          });
+        }
+        redrawCanvas();
+      }
+      saveWhiteboard(true);
+    }
+
+    // --- Helpers for Text & Select ---
+    function wbHitTest(x, y) {
+      // Iterate backwards
+      for (let i = wbState.history.length - 1; i >= 0; i--) {
+        const item = wbState.history[i];
+        if (item.type === 'text') {
+          // Approximate text box
+          const fontSize = item.size * 3;
+          const width = item.text.length * fontSize * 0.6;
+          const height = fontSize;
+          if (x >= item.x && x <= item.x + width && y >= item.y - height && y <= item.y) {
+            return item;
+          }
+        } else if (item.type === 'shape') {
+          const minX = Math.min(item.x, item.x + item.w);
+          const maxX = Math.max(item.x, item.x + item.w);
+          const minY = Math.min(item.y, item.y + item.h);
+          const maxY = Math.max(item.y, item.y + item.h);
+          if (x >= minX && x <= maxX && y >= minY && y <= maxY) return item;
+        } else if (item.type === 'path') {
+          // Simple bounding box for paths
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          item.points.forEach(p => {
+            if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+          });
+          // Add padding
+          const pad = item.size + 5;
+          if (x >= minX - pad && x <= maxX + pad && y >= minY - pad && y <= maxY + pad) return item;
+        }
+      }
+      return null;
+    }
+
+    function wbShowTextInput(cssX, cssY, canvasX, canvasY, val = '') {
+      const input = document.getElementById('wbTextInput');
+      input.style.display = 'block';
+
+      // Calculate screen coordinates
+      // Since input is now in .wb-ui (fixed), we need page/client coordinates
+      // cssX/Y passed from wbStart are relative to CANVAS container.
+      // We need to add the offset of the canvas container.
+      const rect = document.getElementById('wbCanvasNew').getBoundingClientRect();
+      const left = rect.left + cssX;
+      const top = rect.top + cssY;
+
+      input.style.left = left + 'px';
+      input.style.top = (top - 12) + 'px';
+
+      input.value = val;
+      // Style match
+      input.style.fontSize = (wbState.size * 3) + 'px';
+      input.style.color = wbState.color;
+      input.focus();
+
+      // Store creating pos (Internal Canvas Coords)
+      wbState.textX = canvasX;
+      wbState.textY = canvasY;
+    }
+
+    function commitText() {
+      const input = document.getElementById('wbTextInput');
+      if (input.style.display === 'none') return;
+      const text = input.value;
+      if (text) {
+        wbState.history.push({
+          type: 'text',
+          x: wbState.textX,
+          y: wbState.textY,
+          text: text,
+          color: wbState.color,
+          size: wbState.size * 5 // Align scale logic
+        });
+        redrawCanvas();
+        saveWhiteboard(true);
+      }
+      input.style.display = 'none';
+      input.value = '';
+    }
+
+    function handleTextKey(e) {
+      if (e.key === 'Enter') {
+        commitText();
+      } else if (e.key === 'Escape') {
+        document.getElementById('wbTextInput').style.display = 'none';
+      }
+    }
+
+    // Global Key Listener for Delete
+    window.addEventListener('keydown', (e) => {
+      // Only if whiteboard is visible
+      if (document.getElementById('whiteboardUI').classList.contains('hidden')) return;
+
+      // If typing in text input, don't delete
+      if (document.getElementById('wbTextInput').style.display === 'block') return;
+      if (e.target.tagName === 'INPUT') return; // Don't delete when typing in title
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (wbState.selection) {
+          const index = wbState.history.indexOf(wbState.selection);
+          if (index > -1) {
+            wbState.history.splice(index, 1);
+            wbState.selection = null;
+            redrawCanvas();
+            saveWhiteboard(true);
+          }
+        }
+      }
+    });
+
+    function redrawCanvas() {
+      const ctx = wbState.ctx;
+      ctx.clearRect(0, 0, wbState.canvas.width, wbState.canvas.height);
+
+      wbState.history.forEach(action => {
+        ctx.beginPath();
+        ctx.globalCompositeOperation = 'source-over';
+
+        // Highlight selection
+        if (wbState.selection === action) {
+          ctx.shadowColor = 'cyan';
+          ctx.shadowBlur = 10;
+        } else {
+          ctx.shadowBlur = 0;
+        }
+
+        if (action.type === 'path') {
+          if (action.isEraser) {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(0,0,0,1)';
+          } else {
+            ctx.strokeStyle = action.color;
+          }
+          ctx.lineWidth = action.size;
+          ctx.lineCap = 'round';
+          if (action.points.length > 0) {
+            ctx.moveTo(action.points[0].x, action.points[0].y);
+            for (let i = 1; i < action.points.length; i++) {
+              ctx.lineTo(action.points[i].x, action.points[i].y);
+            }
+          }
+          ctx.stroke();
+        } else if (action.type === 'shape') {
+          ctx.strokeStyle = action.color;
+          ctx.lineWidth = action.size;
+          const def = SHAPES[action.shape];
+          if (def) def.path(ctx, action.x, action.y, action.w, action.h);
+          ctx.stroke();
+        } else if (action.type === 'text') {
+          ctx.fillStyle = action.color;
+          ctx.font = `${action.size * 3}px sans-serif`; // Consistent font sizing
+          ctx.fillText(action.text, action.x, action.y);
+        }
+        ctx.shadowBlur = 0; // Reset
+      });
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // --- Toolbar ---
+    function setTool(tool) {
+      wbState.tool = tool;
+      document.querySelectorAll('.wb-tool-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(`tool-${tool === 'shape' ? 'shapes' : tool}`).classList.add('active');
+
+      if (tool !== 'shape') document.getElementById('wbShapePicker').style.display = 'none';
+    }
+
+    function setColor(c) { wbState.color = c; }
+    function setSize(s) { wbState.size = s; }
+
+    function toggleShapePicker() {
+      const p = document.getElementById('wbShapePicker');
+      p.style.display = p.style.display === 'grid' ? 'none' : 'grid';
+    }
+
+    function setShape(shape) {
+      wbState.tool = 'shape';
+      wbState.shapeType = shape;
+      document.querySelectorAll('.wb-tool-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tool-shapes').classList.add('active');
+      toggleShapePicker();
+    }
+
+    function renderShapePicker() {
+      const picker = document.getElementById('wbShapePicker');
+      picker.innerHTML = '';
+      Object.keys(SHAPES).forEach(k => {
+        const div = document.createElement('div');
+        div.className = 'wb-shape-item';
+        div.innerHTML = `<span style="font-size:1.5rem;">${SHAPES[k].icon}</span>`;
+        div.title = SHAPES[k].name;
+        div.onclick = () => setShape(k);
+        picker.appendChild(div);
+      });
+    }
+
+    // --- Listener Setup ---
+    function setupWhiteboardListeners() {
+      const canvas = document.getElementById('wbCanvasNew');
+      if (!canvas) return;
+
+      // Mouse Events
+      canvas.addEventListener('mousedown', wbStart);
+      canvas.addEventListener('mousemove', wbMove);
+      canvas.addEventListener('mouseup', wbEnd);
+      canvas.addEventListener('mouseleave', wbEnd);
+
+      // Touch Events
+      canvas.addEventListener('touchstart', wbStart, { passive: false });
+      canvas.addEventListener('touchmove', wbMove, { passive: false });
+      canvas.addEventListener('touchend', wbEnd);
+    }
+
+    // Open Whiteboard in Chat Context
+    async function openChatWhiteboard() {
+      if (!currentChatId) return;
+
+      // Reset state for new session
+      wbState.history = [];
+      wbState.redoStack = [];
+      wbState.name = currentChatName ? `Whiteboard: ${currentChatName}` : "Chat Whiteboard";
+
+      document.getElementById('wbTitle').value = wbState.name;
+      document.getElementById('whiteboardUI').classList.remove('hidden');
+
       setupWhiteboardListeners();
 
-
-      // --- Socket.IO Sync Logic ---
-      function setupWhiteboardSocket() {
-        if (!socket) return;
-
-        socket.on('whiteboard_draw', (data) => {
-          // Check if it's THIS whiteboard context
-          // Ideally check ID, but for now we trust the room
-          wbState.history.push(data);
-          redrawCanvas();
-        });
-
-        socket.on('whiteboard_update', (data) => {
-          // Find item by some ID? 
-          // We don't have UUIDs for items yet. Index sync is flaky if history differs.
-          // PRO FIX: We need UUIDs for items. 
-          // Quick Fix: For now, we might just append 'update' events or trust order.
-          // Real-time moving requires identifying the object.
-          // Let's skip move-sync for this exact second until we add IDs, 
-          // OR just sync "Add/Delete" and "Clear".
-          // User requested interaction.
-          // Let's implement full state sync for simplicity: receive full history? No, too heavy.
-          // Let's implement standard draw sync first.
-        });
-
-        socket.on('whiteboard_delete', (data) => {
-          // Deletion sync needs ID.
-          // If we don't have IDs, we can't delete specific remote items easily.
-          // Allow Clear.
-        });
-
-        socket.on('whiteboard_clear', () => {
-          wbState.history = [];
-          redrawCanvas();
+      // Request latest state from peers
+      if (socket) {
+        socket.emit('whiteboard_request_state', {
+          chat_type: currentChatType,
+          chat_id: currentChatId
         });
       }
+    }
 
-      // Inject socket listeners when connecting
-      const originalConnect = connectSocket;
-      connectSocket = function (token) {
-        originalConnect(token);
-        setupWhiteboardSocket();
-      };
+    // Call this when opening WB (Standalone)
+    const originalOpenWB = openWhiteboardStandalone;
+    openWhiteboardStandalone = async function (id) {
+      await originalOpenWB(id);
 
-      // --- Emit Logic Updates ---
-      // Update wbEnd to emit
-      const originalWbEnd = wbEnd;
-      wbEnd = function (e) {
-        // Capture history length before
-        const len = wbState.history.length;
-        originalWbEnd(e);
-        const newLen = wbState.history.length;
+      // Ensure state is initialized
+      wbState.canvas = document.getElementById('wbCanvasNew');
+      wbState.ctx = wbState.canvas.getContext('2d');
+      wbState.container = document.getElementById('wbCanvasContainer');
 
-        if (newLen > len && socket && currentChatId) {
-          // Last item was added
-          const item = wbState.history[newLen - 1];
-          socket.emit('whiteboard_draw', {
-            ...item,
-            chat_type: currentChatType,
-            chat_id: currentChatId
-          });
-        }
-      };
+      setupWhiteboardListeners();
+    };
 
-      // Update commitText to emit
-      const originalCommitText = commitText;
-      commitText = function () {
-        const len = wbState.history.length;
-        originalCommitText();
-        const newLen = wbState.history.length;
+    // Auto-init for standalone dev/testing if needed, or just rely on open.
+    // Better: init on load if element exists
+    setupWhiteboardListeners();
 
-        if (newLen > len && socket && currentChatId) {
-          const item = wbState.history[newLen - 1];
-          socket.emit('whiteboard_draw', {
-            ...item,
-            chat_type: currentChatType,
-            chat_id: currentChatId
-          });
-        }
-      };
 
-      // Update global delete listener to emit (skipping complex ID logic for now)
-      // We will confirm delete works locally first. Syncing delete requires IDs. 
-      // I'll add UUIDs to items in next step if requested.
+    // --- Socket.IO Sync Logic ---
+    function setupWhiteboardSocket() {
+      if (!socket) return;
 
-      // Persistence ---
-      async function saveWhiteboardName() {
-        wbState.name = document.getElementById('wbTitle').value;
-        saveWhiteboard();
+      socket.on('whiteboard_draw', (data) => {
+        // Check if it's THIS whiteboard context
+        // Ideally check ID, but for now we trust the room
+        wbState.history.push(data);
+        redrawCanvas();
+      });
+
+      socket.on('whiteboard_update', (data) => {
+        // Find item by some ID? 
+        // We don't have UUIDs for items yet. Index sync is flaky if history differs.
+        // PRO FIX: We need UUIDs for items. 
+        // Quick Fix: For now, we might just append 'update' events or trust order.
+        // Real-time moving requires identifying the object.
+        // Let's skip move-sync for this exact second until we add IDs, 
+        // OR just sync "Add/Delete" and "Clear".
+        // User requested interaction.
+        // Let's implement full state sync for simplicity: receive full history? No, too heavy.
+        // Let's implement standard draw sync first.
+      });
+
+      socket.on('whiteboard_delete', (data) => {
+        // Deletion sync needs ID.
+        // If we don't have IDs, we can't delete specific remote items easily.
+        // Allow Clear.
+      });
+
+      socket.on('whiteboard_clear', () => {
+        wbState.history = [];
+        redrawCanvas();
+      });
+    }
+
+    // Inject socket listeners when connecting
+    const originalConnect = connectSocket;
+    connectSocket = function (token) {
+      originalConnect(token);
+      setupWhiteboardSocket();
+    };
+
+    // --- Emit Logic Updates ---
+    // Update wbEnd to emit
+    const originalWbEnd = wbEnd;
+    wbEnd = function (e) {
+      // Capture history length before
+      const len = wbState.history.length;
+      originalWbEnd(e);
+      const newLen = wbState.history.length;
+
+      if (newLen > len && socket && currentChatId) {
+        // Last item was added
+        const item = wbState.history[newLen - 1];
+        socket.emit('whiteboard_draw', {
+          ...item,
+          chat_type: currentChatType,
+          chat_id: currentChatId
+        });
       }
+    };
 
-      async function saveWhiteboard(silent = false) {
-        if (!wbState.id) {
-          // In chat mode, we don't save to a persistent ID yet (Live Sync handles it)
-          if (!silent) {
-            const status = document.getElementById('wbSaveStatus');
-            status.textContent = 'Saved (Chat)';
-            setTimeout(() => status.textContent = 'Saved', 2000);
-          }
-          return;
-        }
-        const status = document.getElementById('wbSaveStatus');
-        if (!silent) status.textContent = 'Saving...';
+    // Update commitText to emit
+    const originalCommitText = commitText;
+    commitText = function () {
+      const len = wbState.history.length;
+      originalCommitText();
+      const newLen = wbState.history.length;
 
-        try {
-          const thumbCanvas = document.createElement('canvas');
-          thumbCanvas.width = 300; thumbCanvas.height = 200;
-          const tCtx = thumbCanvas.getContext('2d');
-          tCtx.fillStyle = 'white';
-          tCtx.fillRect(0, 0, 300, 200);
-          tCtx.drawImage(wbState.canvas, 0, 0, 300, 200);
-          const thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
+      if (newLen > len && socket && currentChatId) {
+        const item = wbState.history[newLen - 1];
+        socket.emit('whiteboard_draw', {
+          ...item,
+          chat_type: currentChatType,
+          chat_id: currentChatId
+        });
+      }
+    };
 
-          await api(`/api/whiteboards/${wbState.id}/save`, {
-            method: 'POST',
-            body: JSON.stringify({
-              name: wbState.name,
-              data: JSON.stringify(wbState.history),
-              thumbnail: thumb
-            })
-          });
-          status.textContent = 'Saved';
+    // Update global delete listener to emit (skipping complex ID logic for now)
+    // We will confirm delete works locally first. Syncing delete requires IDs. 
+    // I'll add UUIDs to items in next step if requested.
+
+    // Persistence ---
+    async function saveWhiteboardName() {
+      wbState.name = document.getElementById('wbTitle').value;
+      saveWhiteboard();
+    }
+
+    async function saveWhiteboard(silent = false) {
+      if (!wbState.id) {
+        // In chat mode, we don't save to a persistent ID yet (Live Sync handles it)
+        if (!silent) {
+          const status = document.getElementById('wbSaveStatus');
+          status.textContent = 'Saved (Chat)';
           setTimeout(() => status.textContent = 'Saved', 2000);
-        } catch (e) {
-          status.textContent = 'Error Saving';
-          console.error(e);
         }
+        return;
       }
+      const status = document.getElementById('wbSaveStatus');
+      if (!silent) status.textContent = 'Saving...';
+
+      try {
+        const thumbCanvas = document.createElement('canvas');
+        thumbCanvas.width = 300; thumbCanvas.height = 200;
+        const tCtx = thumbCanvas.getContext('2d');
+        tCtx.fillStyle = 'white';
+        tCtx.fillRect(0, 0, 300, 200);
+        tCtx.drawImage(wbState.canvas, 0, 0, 300, 200);
+        const thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
+
+        await api(`/api/whiteboards/${wbState.id}/save`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: wbState.name,
+            data: JSON.stringify(wbState.history),
+            thumbnail: thumb
+          })
+        });
+        status.textContent = 'Saved';
+        setTimeout(() => status.textContent = 'Saved', 2000);
+      } catch (e) {
+        status.textContent = 'Error Saving';
+        console.error(e);
+      }
+    }
   </script>
 </body>
 
