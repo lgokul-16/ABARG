@@ -116,3 +116,12 @@ class MessageSeen(db.Model):
     seen_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     __table_args__ = (db.UniqueConstraint('message_id', 'user_id', name='_user_message_seen_uc'),)
+
+class Whiteboard(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), default="Untitled Whiteboard")
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    data = db.Column(db.Text, nullable=True) # JSON Stored as Text
+    thumbnail = db.Column(db.Text, nullable=True) # Base64 Image
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -17,7 +17,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from config import Config
 # Import DB and Models from models.py
 from models import db, User, EmailOTP, FriendRequest, Friend, Conversation, Participant, Group, GroupMember, Message, Reaction, MessageSeen, FriendRequest, \
-    Friend
+    Friend, Whiteboard
 
 # === Flask App Setup ===
 app = Flask(__name__)
@@ -1286,6 +1286,91 @@ def on_end_call(data):
     # Notify my other devices (and self, to be safe/consistent)
     if user_id:
         emit('call_ended', {}, room=str(user_id))
+
+
+
+# === Whiteboard Standalone API ===
+
+@app.route('/api/whiteboards', methods=['GET'])
+@jwt_required()
+def get_whiteboards():
+    user_id = int(get_jwt_identity())
+    boards = Whiteboard.query.filter_by(owner_id=user_id).order_by(Whiteboard.updated_at.desc()).all()
+    return jsonify([{
+        "id": b.id,
+        "name": b.name,
+        "updated_at": b.updated_at.isoformat() + 'Z',
+        "thumbnail": b.thumbnail
+    } for b in boards]), 200
+
+@app.route('/api/whiteboards', methods=['POST'])
+@jwt_required()
+def create_whiteboard():
+    user_id = int(get_jwt_identity())
+    data = request.get_json()
+    name = data.get('name', 'Untitled Whiteboard')
+    
+    board = Whiteboard(name=name, owner_id=user_id, data="[]") # Empty array init
+    db.session.add(board)
+    db.session.commit()
+    
+    return jsonify({
+        "msg": "Whiteboard created",
+        "id": board.id,
+        "name": board.name
+    }), 201
+
+@app.route('/api/whiteboards/<int:board_id>', methods=['GET'])
+@jwt_required()
+def get_whiteboard_data(board_id):
+    user_id = int(get_jwt_identity())
+    board = db.session.get(Whiteboard, board_id)
+    if not board:
+        return jsonify({"msg": "Whiteboard not found"}), 404
+    if board.owner_id != user_id:
+        return jsonify({"msg": "Unauthorized"}), 403
+    
+    return jsonify({
+        "id": board.id,
+        "name": board.name,
+        "data": board.data,
+        "updated_at": board.updated_at.isoformat() + 'Z'
+    }), 200
+
+@app.route('/api/whiteboards/<int:board_id>/save', methods=['POST'])
+@jwt_required()
+def save_whiteboard(board_id):
+    user_id = int(get_jwt_identity())
+    board = db.session.get(Whiteboard, board_id)
+    if not board:
+        return jsonify({"msg": "Whiteboard not found"}), 404
+    if board.owner_id != user_id:
+        return jsonify({"msg": "Unauthorized"}), 403
+
+    data = request.get_json()
+    board.data = data.get('data') # JSON string expected
+    board.name = data.get('name', board.name)
+    if 'thumbnail' in data:
+        board.thumbnail = data['thumbnail']
+    
+    board.updated_at = datetime.utcnow()
+    db.session.commit()
+    
+    return jsonify({"msg": "Saved"}), 200
+
+@app.route('/api/whiteboards/<int:board_id>', methods=['DELETE'])
+@jwt_required()
+def delete_whiteboard(board_id):
+    user_id = int(get_jwt_identity())
+    board = db.session.get(Whiteboard, board_id)
+    if not board:
+        return jsonify({"msg": "Whiteboard not found"}), 404
+    if board.owner_id != user_id:
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    db.session.delete(board)
+    db.session.commit()
+    return jsonify({"msg": "Deleted"}), 200
 
 
 # === Run ===

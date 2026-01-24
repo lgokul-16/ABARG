@@ -1016,6 +1016,204 @@
       background: #22c55e;
       color: white;
     }
+
+    /* Whiteboard Dashboard */
+    .wb-dashboard {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .wb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .wb-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: var(--border-elegant);
+      border-radius: 16px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .wb-card:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .wb-thumbnail {
+      width: 100%;
+      height: 120px;
+      background: white;
+      border-radius: 8px;
+      object-fit: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ccc;
+      font-size: 2rem;
+    }
+
+    .wb-title {
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .wb-date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Whiteboard UI (Standalone) */
+    .wb-ui {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-gradient);
+      z-index: 5000;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .wb-header {
+      height: 60px;
+      background: var(--glass-header-bg);
+      backdrop-filter: blur(10px);
+      border-bottom: var(--border-elegant);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      justify-content: space-between;
+      color: var(--text-main);
+    }
+
+    .wb-header input {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-main);
+      font-size: 1.2rem;
+      font-weight: 600;
+      width: 300px;
+    }
+
+    .wb-header input:focus {
+      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .wb-toolbar {
+      position: absolute;
+      top: 80px;
+      left: 20px;
+      background: var(--glass-panel-bg);
+      backdrop-filter: blur(10px);
+      border: var(--border-elegant);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+    }
+
+    .wb-tool-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .wb-tool-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+    }
+
+    .wb-tool-btn.active {
+      background: var(--primary-gradient);
+      color: white;
+      box-shadow: 0 4px 10px rgba(124, 58, 237, 0.4);
+    }
+
+    .wb-canvas-container {
+      flex: 1;
+      overflow: auto;
+      background: #f1f5f9;
+      /* Graph paper generic bg, or white */
+      position: relative;
+      cursor: crosshair;
+    }
+
+    body.light-mode .wb-canvas-container {
+      background: #ffffff;
+    }
+
+    /* Shape Picker Popover */
+    .wb-shape-picker {
+      position: absolute;
+      left: 60px;
+      /* Right of toolbar */
+      top: 0;
+      width: 280px;
+      background: var(--glass-panel-bg);
+      backdrop-filter: blur(20px);
+      border: var(--border-elegant);
+      border-radius: 12px;
+      padding: 15px;
+      display: none;
+      /* Toggled */
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .wb-shape-item {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .wb-shape-item svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--text-main);
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .wb-shape-item:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
   </style>
 </head>
 
@@ -1068,6 +1266,9 @@
           <div style="padding:10px;">
             <button onclick="showAddFriend()">+ Add Friend</button>
           </div>
+          <div style="padding:0 10px 10px 10px;">
+            <button onclick="showWhiteboardDashboard()">🎨 Whiteboard</button>
+          </div>
           <h4 style="padding:10px 16px;margin:0;">Chats</h4>
           <ul id="chatList" class="chat-list"></ul>
           <h4 style="padding:10px 16px;margin:0;">Groups</h4>
@@ -1109,6 +1310,19 @@
             <button onclick="sendMessage()">Send</button>
             <button onclick="document.getElementById('imageUpload').click()" style="margin-left:5px;">📷</button>
             <input type="file" id="imageUpload" accept="image/*" onchange="uploadImage(this)" style="display:none;" />
+          </div>
+        </div>
+
+        <!-- Whiteboard Dashboard -->
+        <div id="whiteboardDashboard" class="wb-dashboard hidden">
+          <h2 style="margin-bottom:20px;">My Whiteboards</h2>
+          <div style="margin-bottom:20px;">
+            <button onclick="createNewWhiteboard()"
+              style="background:var(--primary-gradient); color:white; padding:10px 20px; border-radius:30px; font-weight:600;">+
+              New Whiteboard</button>
+          </div>
+          <div id="wbGrid" class="wb-grid">
+            <!-- WB Cards loaded via JS -->
           </div>
         </div>
 
@@ -1328,26 +1542,40 @@
     </div>
   </div>
 
-  <!-- Whiteboard Modal -->
-  <div id="whiteboardModal" class="hidden"
-    style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:3000; display:flex; flex-direction:column;">
-    <div
-      style="padding:10px; background:#f1f5f9; border-bottom:1px solid #ddd; display:flex; align-items:center; gap:10px;">
-      <h3 style="margin:0; margin-right:auto; color:#333;">🎨 Whiteboard</h3>
-      <!-- Status Indicator -->
-      <div id="wbStatus" title="Status"
-        style="width:12px; height:12px; border-radius:50%; background:#ccc; margin-right:10px;"></div>
-      <input type="color" id="wbColor" value="#000000" title="Color">
-      <input type="range" id="wbSize" min="2" max="20" value="4" title="Brush Size">
-      <button onclick="toggleEraser()" id="wbEraserBtn"
-        style="padding:5px 10px; border-radius:5px; background:white; border:1px solid #ccc;">Eraser</button>
-      <button onclick="clearWhiteboardLocal()"
-        style="padding:5px 10px; border-radius:5px; background:#ef4444; color:white; border:none;">Clear</button>
-      <button onclick="closeWhiteboard()"
-        style="padding:5px 10px; border-radius:5px; background:#333; color:white; border:none;">Close</button>
+  <!-- Whiteboard UI (Standalone) -->
+  <div id="whiteboardUI" class="wb-ui hidden">
+    <div class="wb-header">
+      <input type="text" id="wbTitle" value="Untitled Whiteboard" onchange="saveWhiteboardName()">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <span id="wbSaveStatus" style="font-size:0.8rem; color:var(--text-muted);">Saved</span>
+        <button onclick="saveWhiteboard()"
+          style="background:var(--primary-gradient); color:white; padding:8px 20px; border-radius:20px;">Save</button>
+        <button onclick="closeWhiteboardUI()" class="secondary-btn">Close</button>
+      </div>
     </div>
-    <div style="flex:1; position:relative; overflow:hidden;" id="wbContainer">
-      <canvas id="wbCanvas" style="cursor:crosshair; touch-action:none;"></canvas>
+
+    <!-- Toolbar -->
+    <div class="wb-toolbar">
+      <button class="wb-tool-btn active" id="tool-pen" onclick="setTool('pen')" title="Pen">✏️</button>
+      <button class="wb-tool-btn" id="tool-eraser" onclick="setTool('eraser')" title="Eraser">🧹</button>
+      <button class="wb-tool-btn" id="tool-text" onclick="setTool('text')" title="Text">T</button>
+      <button class="wb-tool-btn" id="tool-shapes" onclick="toggleShapePicker()" title="Shapes">🔶</button>
+
+      <div style="height:1px; background:rgba(255,255,255,0.1); margin:5px 0;"></div>
+
+      <input type="color" id="wbColorPicker" value="#000000" onchange="setColor(this.value)"
+        style="width:30px; height:30px; padding:0; border:none; border-radius:50%; overflow:hidden;">
+      <input type="range" id="wbSizeSlider" min="1" max="20" value="4" oninput="setSize(this.value)"
+        style="width:100%;">
+
+      <!-- Shape Picker Popover -->
+      <div id="wbShapePicker" class="wb-shape-picker">
+        <!-- Shapes injected by JS -->
+      </div>
+    </div>
+
+    <div class="wb-canvas-container" id="wbCanvasContainer">
+      <canvas id="wbCanvasNew"></canvas>
     </div>
   </div>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -3295,6 +3523,469 @@
       showRegister();
     }
   </script>
+
+  /* ================= Whiteboard Logic V2 (Standalone) ================= */
+
+  // --- State & Constants ---
+  const SHAPES = {
+  'rect': { name: 'Rectangle', icon: '⬜', path: (ctx, x, y, w, h) => ctx.rect(x, y, w, h) },
+  'circle': { name: 'Circle', icon: '⚪', path: (ctx, x, y, w, h) => { ctx.arc(x + w/2, y + h/2, Math.abs(w)/2, 0, 2 *
+  Math.PI); } },
+  'triangle': { name: 'Triangle', icon: '🔺', path: (ctx, x, y, w, h) => {
+  ctx.moveTo(x + w/2, y); ctx.lineTo(x, y + h); ctx.lineTo(x + w, y + h); ctx.closePath();
+  }},
+  'star': { name: 'Star', icon: '⭐', path: (ctx, x, y, w, h) => {
+  const cx = x + w/2, cy = y + h/2, outer = Math.abs(w)/2, inner = outer/2;
+  for(let i=0; i<5; i++){ ctx.lineTo(cx + Math.cos((18 + i*72)/180*Math.PI)*outer, cy - Math.sin((18 +
+    i*72)/180*Math.PI)*outer); ctx.lineTo(cx + Math.cos((54 + i*72)/180*Math.PI)*inner, cy - Math.sin((54 +
+    i*72)/180*Math.PI)*inner); } ctx.closePath(); }}, 'arrow_r' : { name: 'Arrow Right' , icon: '➡️' , path: (ctx, x, y,
+    w, h)=> {
+    const my = y + h/2;
+    ctx.moveTo(x, my - h/4); ctx.lineTo(x + w*0.7, my - h/4); ctx.lineTo(x + w*0.7, y);
+    ctx.lineTo(x + w, my); ctx.lineTo(x + w*0.7, y + h); ctx.lineTo(x + w*0.7, my + h/4);
+    ctx.lineTo(x, my + h/4); ctx.closePath();
+    }},
+    'arrow_l': { name: 'Arrow Left', icon: '⬅️', path: (ctx, x, y, w, h) => {
+    const my = y + h/2;
+    ctx.moveTo(x + w, my - h/4); ctx.lineTo(x + w*0.3, my - h/4); ctx.lineTo(x + w*0.3, y);
+    ctx.lineTo(x, my); ctx.lineTo(x + w*0.3, y + h); ctx.lineTo(x + w*0.3, my + h/4);
+    ctx.lineTo(x + w, my + h/4); ctx.closePath();
+    }},
+    'arrow_u': { name: 'Arrow Up', icon: '⬆️', path: (ctx, x, y, w, h) => {
+    const mx = x + w/2;
+    ctx.moveTo(mx - w/4, y + h); ctx.lineTo(mx - w/4, y + h*0.3); ctx.lineTo(x, y + h*0.3);
+    ctx.lineTo(mx, y); ctx.lineTo(x + w, y + h*0.3); ctx.lineTo(mx + w/4, y + h*0.3);
+    ctx.lineTo(mx + w/4, y + h); ctx.closePath();
+    }},
+    'arrow_d': { name: 'Arrow Down', icon: '⬇️', path: (ctx, x, y, w, h) => {
+    const mx = x + w/2;
+    ctx.moveTo(mx - w/4, y); ctx.lineTo(mx - w/4, y + h*0.7); ctx.lineTo(x, y + h*0.7);
+    ctx.lineTo(mx, y + h); ctx.lineTo(x + w, y + h*0.7); ctx.lineTo(mx + w/4, y + h*0.7);
+    ctx.lineTo(mx + w/4, y); ctx.closePath();
+    }},
+    'diamond': { name: 'Diamond', icon: '🔶', path: (ctx, x, y, w, h) => {
+    ctx.moveTo(x + w/2, y); ctx.lineTo(x + w, y + h/2); ctx.lineTo(x + w/2, y + h); ctx.lineTo(x, y + h/2);
+    ctx.closePath();
+    }},
+    'cloud': { name: 'Cloud', icon: '☁️', path: (ctx, x, y, w, h) => {
+    ctx.arc(x+w*0.2, y+h*0.7, w*0.2, 0, 2*Math.PI);
+    ctx.arc(x+w*0.5, y+h*0.6, w*0.3, 0, 2*Math.PI);
+    ctx.arc(x+w*0.8, y+h*0.7, w*0.2, 0, 2*Math.PI);
+    }},
+    'heart': { name: 'Heart', icon: '❤️', path: (ctx, x, y, w, h) => {
+    const topCurveHeight = h * 0.3;
+    ctx.moveTo(x + w / 2, y + h * 0.2);
+    ctx.bezierCurveTo(x + w / 2, y, x, y, x, y + topCurveHeight);
+    ctx.bezierCurveTo(x, y + (h + topCurveHeight) / 2, x + w / 2, y + h, x + w / 2, y + h);
+    ctx.bezierCurveTo(x + w / 2, y + h, x + w, y + (h + topCurveHeight) / 2, x + w, y + topCurveHeight);
+    ctx.bezierCurveTo(x + w, y, x + w / 2, y, x + w / 2, y + h * 0.2);
+    ctx.closePath();
+    }},
+    'check': { name: 'Check', icon: '✔️', path: (ctx, x, y, w, h) => {
+    ctx.moveTo(x, y + h*0.5); ctx.lineTo(x + w*0.4, y + h); ctx.lineTo(x + w, y);
+    }},
+    'cross': { name: 'Cross', icon: '❌', path: (ctx, x, y, w, h) => {
+    ctx.moveTo(x, y); ctx.lineTo(x + w, y + h);
+    ctx.moveTo(x + w, y); ctx.lineTo(x, y + h);
+    }},
+    'thought': { name: 'Thought', icon: '💭', path: (ctx, x, y, w, h) => {
+    ctx.ellipse(x+w*0.5, y+h*0.4, w*0.4, h*0.3, 0, 0, 2*Math.PI);
+    ctx.moveTo(x+w*0.3, y+h*0.7); ctx.arc(x+w*0.2, y+h*0.8, w*0.05, 0, 2*Math.PI);
+    ctx.moveTo(x+w*0.15, y+h*0.9); ctx.arc(x+w*0.1, y+h*0.95, w*0.03, 0, 2*Math.PI);
+    }},
+    'cube': { name: 'Cube', icon: '🧊', path: (ctx, x, y, w, h) => {
+    const d = w*0.25;
+    ctx.rect(x, y+d, w-d, h-d);
+    ctx.moveTo(x, y+d); ctx.lineTo(x+d, y); ctx.lineTo(x+w, y); ctx.lineTo(x+w-d, y+d);
+    ctx.moveTo(x+w, y); ctx.lineTo(x+w, y+h-d); ctx.lineTo(x+w-d, y+h);
+    }},
+    'cylinder': { name: 'Cylinder', icon: '🛢️', path: (ctx, x, y, w, h) => {
+    const eh = h*0.15;
+    ctx.ellipse(x+w/2, y+eh, w/2, eh, 0, 0, 2*Math.PI);
+    ctx.moveTo(x, y+eh); ctx.lineTo(x, y+h-eh);
+    ctx.ellipse(x+w/2, y+h-eh, w/2, eh, 0, 0, Math.PI); // Bottom half
+    ctx.lineTo(x+w, y+eh);
+    }},
+    'smiley': { name: 'Smile', icon: '🙂', path: (ctx, x, y, w, h) => {
+    ctx.arc(x+w/2, y+h/2, w/2, 0, 2*Math.PI); // Face
+    ctx.moveTo(x+w*0.3, y+h*0.4); ctx.arc(x+w*0.3, y+h*0.4, w*0.05, 0, 2*Math.PI); // Eye L
+    ctx.moveTo(x+w*0.7, y+h*0.4); ctx.arc(x+w*0.7, y+h*0.4, w*0.05, 0, 2*Math.PI); // Eye R
+    ctx.moveTo(x+w*0.2, y+h*0.6); ctx.bezierCurveTo(x+w*0.2, y+h*0.9, x+w*0.8, y+h*0.9, x+w*0.8, y+h*0.6);
+    }},
+    'parallelogram': { name: 'Parallelogram', icon: '▰', path: (ctx, x, y, w, h) => {
+    const skew = w*0.2;
+    ctx.moveTo(x + skew, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - skew, y + h); ctx.lineTo(x, y + h);
+    ctx.closePath();
+    }},
+    'trapezoid': { name: 'Trapezoid', icon: '⏢', path: (ctx, x, y, w, h) => {
+    const inset = w*0.2;
+    ctx.moveTo(x + inset, y); ctx.lineTo(x + w - inset, y); ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h);
+    ctx.closePath();
+    }},
+    'hexagon': { name: 'Hexagon', icon: '⬡', path: (ctx, x, y, w, h) => {
+    const cx = x + w/2, cy = y + h/2, r = Math.min(w,h)/2;
+    for (let i = 0; i < 6; i++) { ctx.lineTo(cx + r * Math.cos(i * 2 * Math.PI / 6), cy + r * Math.sin(i * 2 * Math.PI /
+      6)); } ctx.closePath(); }}, 'pentagon' : { name: 'Pentagon' , icon: '⬠' , path: (ctx, x, y, w, h)=> {
+      const cx = x + w/2, cy = y + h/2, r = Math.min(w,h)/2;
+      for (let i = 0; i < 5; i++) { ctx.lineTo(cx + r * Math.cos(i * 2 * Math.PI / 5 - Math.PI/2), cy + r * Math.sin(i *
+        2 * Math.PI / 5 - Math.PI/2)); } ctx.closePath(); }}, 'document' : { name: 'Document' , icon: '📄' , path: (ctx,
+        x, y, w, h)=> {
+        const fold = w*0.3;
+        ctx.moveTo(x,y); ctx.lineTo(x+w-fold, y); ctx.lineTo(x+w, y+fold); ctx.lineTo(x+w, y+h);
+        ctx.lineTo(x, y+h); ctx.closePath();
+        ctx.moveTo(x+w-fold, y); ctx.lineTo(x+w-fold, y+fold); ctx.lineTo(x+w, y+fold);
+        }},
+        'database': { name: 'Database', icon: '🗄️', path: (ctx, x, y, w, h) => {
+        const eh = h*0.15;
+        ctx.ellipse(x+w/2, y+eh, w/2, eh, 0, 0, 2*Math.PI);
+        ctx.moveTo(x, y+eh); ctx.lineTo(x, y+h-eh);
+        ctx.ellipse(x+w/2, y+h-eh, w/2, eh, 0, 0, Math.PI);
+        ctx.lineTo(x+w, y+eh);
+        ctx.moveTo(x, y+h*0.5); ctx.ellipse(x+w/2, y+h*0.5, w/2, eh, 0, 0, Math.PI);
+        }},
+        'sun': { name: 'Sun', icon: '☀️', path: (ctx, x, y, w, h) => {
+        const cx = x+w/2, cy = y+h/2, r = w*0.25;
+        ctx.arc(cx, cy, r, 0, 2*Math.PI);
+        for(let i=0; i<8; i++) { const angle=i * Math.PI / 4; ctx.moveTo(cx + Math.cos(angle)*r*1.2, cy +
+          Math.sin(angle)*r*1.2); ctx.lineTo(cx + Math.cos(angle)*r*1.8, cy + Math.sin(angle)*r*1.8); } }}, 'moon' : {
+          name: 'Moon' , icon: '🌙' , path: (ctx, x, y, w, h)=> {
+          ctx.arc(x+w/2, y+h/2, w*0.4, 0, 2*Math.PI); // Base circle
+          // Simplified clip? Canvas path clip is complex in one stroke.
+          // Just draw a crescent using bezier
+          ctx.moveTo(x+w*0.5, y+h*0.1);
+          ctx.bezierCurveTo(x+w, y+h*0.5, x+w*0.5, y+h*0.9, x+w*0.5, y+h*0.9);
+          ctx.bezierCurveTo(x+w*0.8, y+h*0.5, x+w*0.5, y+h*0.1, x+w*0.5, y+h*0.1);
+          }},
+          'lightning': { name: 'Lightning', icon: '⚡', path: (ctx, x, y, w, h) => {
+          ctx.moveTo(x+w*0.6, y); ctx.lineTo(x+w*0.3, y+h*0.6); ctx.lineTo(x+w*0.5, y+h*0.6);
+          ctx.lineTo(x+w*0.4, y+h); ctx.lineTo(x+w*0.7, y+h*0.4); ctx.lineTo(x+w*0.5, y+h*0.4);
+          ctx.closePath();
+          }},
+          'lock': { name: 'Lock', icon: '🔒', path: (ctx, x, y, w, h) => {
+          ctx.rect(x+w*0.2, y+h*0.4, w*0.6, h*0.6);
+          ctx.moveTo(x+w*0.3, y+h*0.4); ctx.arc(x+w*0.5, y+h*0.4, w*0.2, Math.PI, 0);
+          }},
+          'key': { name: 'Key', icon: '🔑', path: (ctx, x, y, w, h) => {
+          ctx.arc(x+w*0.2, y+h*0.5, w*0.2, 0, 2*Math.PI);
+          ctx.moveTo(x+w*0.4, y+h*0.5); ctx.lineTo(x+w*0.9, y+h*0.5);
+          ctx.lineTo(x+w*0.9, y+h*0.7);
+          ctx.moveTo(x+w*0.7, y+h*0.5); ctx.lineTo(x+w*0.7, y+h*0.7);
+          }},
+          'envelope': { name: 'Envelope', icon: '✉️', path: (ctx, x, y, w, h) => {
+          ctx.rect(x, y+h*0.2, w, h*0.8);
+          ctx.moveTo(x, y+h*0.2); ctx.lineTo(x+w/2, y+h*0.6); ctx.lineTo(x+w, y+h*0.2);
+          }},
+          };
+
+          let wbState = {
+          id: null,
+          name: "Untitled",
+          tool: 'pen',
+          shapeType: null, // if tool is shape
+          color: '#000000',
+          size: 4,
+          isDrawing: false,
+          startX: 0, startY: 0,
+          history: [], // Elements
+          redoStack: [],
+          canvas: null,
+          ctx: null,
+          container: null
+          };
+
+          // --- Dashboard ---
+          function showWhiteboardDashboard() {
+          document.getElementById('sidebar').classList.add('hidden');
+          if (window.innerWidth <= 768) { document.querySelector('.sidebar').style.display='none' ;
+            document.querySelector('.main-chat').style.display='none' ; } chatArea.classList.add('hidden');
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('whiteboardDashboard').classList.remove('hidden'); loadWhiteboards(); } async
+            function loadWhiteboards() { const grid=document.getElementById('wbGrid');
+            grid.innerHTML='<p>Loading...</p>' ; try { const boards=await api('/api/whiteboards'); grid.innerHTML='' ;
+            if (boards.length===0) { grid.innerHTML='<p>No whiteboards yet. Create one!</p>' ; return; }
+            boards.forEach(b=> {
+            const card = document.createElement('div');
+            card.className = 'wb-card';
+            card.innerHTML = `
+            <div class="wb-thumbnail">${b.thumbnail ? '<img src="'+b.thumbnail+'"
+                style="width:100%;height:100%;object-fit:cover;">' : '🎨'}</div>
+            <div class="wb-title">${b.name}</div>
+            <div class="wb-date">${new Date(b.updated_at).toLocaleDateString()}</div>
+            <button onclick="deleteWhiteboard(event, ${b.id})" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border-radius:50%; width:24px; height:24px; display:flex; 
+                    align-items:center; justify-content:center; border:none;">✕</button>
+            `;
+            card.onclick = (e) => {
+            if(e.target.tagName === 'BUTTON') return;
+            openWhiteboardStandalone(b.id);
+            };
+            grid.appendChild(card);
+            });
+            } catch (e) {
+            grid.innerHTML = '<p style="color:red">Failed to load whiteboards</p>';
+            }
+            }
+
+            async function createNewWhiteboard() {
+            try {
+            const res = await api('/api/whiteboards', {
+            method: 'POST',
+            body: JSON.stringify({ name: "Untitled Whiteboard" })
+            });
+            openWhiteboardStandalone(res.id);
+            } catch (e) {
+            alert("Error creating whiteboard: " + e.message);
+            }
+            }
+
+            async function deleteWhiteboard(e, id) {
+            e.stopPropagation();
+            if(!confirm("Delete this whiteboard?")) return;
+            try {
+            await api(`/api/whiteboards/${id}`, { method: 'DELETE' });
+            loadWhiteboards();
+            } catch (e) {
+            alert("Failed to delete");
+            }
+            }
+
+            // --- UI & Interaction ---
+            async function openWhiteboardStandalone(id) {
+            try {
+            const data = await api(`/api/whiteboards/${id}`);
+            wbState.id = data.id;
+            wbState.name = data.name;
+            wbState.history = data.data ? JSON.parse(data.data) : [];
+            wbState.redoStack = [];
+
+            document.getElementById('wbTitle').value = wbState.name;
+            document.getElementById('whiteboardUI').classList.remove('hidden');
+
+            initWhiteboardCanvas();
+            redrawCanvas();
+            renderShapePicker();
+            } catch (e) {
+            alert("Failed to open whiteboard: " + e.message);
+            }
+            }
+
+            function initWhiteboardCanvas() {
+            wbState.container = document.getElementById('wbCanvasContainer');
+            wbState.canvas = document.getElementById('wbCanvasNew');
+            wbState.ctx = wbState.canvas.getContext('2d');
+            wbState.canvas.width = 3000;
+            wbState.canvas.height = 3000;
+
+            const cvs = wbState.canvas;
+            cvs.addEventListener('mousedown', wbStart);
+            cvs.addEventListener('mousemove', wbMove);
+            cvs.addEventListener('mouseup', wbEnd);
+            cvs.addEventListener('mouseout', wbEnd);
+
+            cvs.addEventListener('touchstart', (e) => {
+            if(wbState.tool === 'pen' || wbState.tool === 'eraser') e.preventDefault();
+            wbStart(e.touches[0]);
+            });
+            cvs.addEventListener('touchmove', (e) => {
+            if(wbState.tool === 'pen' || wbState.tool === 'eraser') e.preventDefault();
+            wbMove(e.touches[0]);
+            });
+            cvs.addEventListener('touchend', wbEnd);
+            }
+
+            function closeWhiteboardUI() {
+            document.getElementById('whiteboardUI').classList.add('hidden');
+            loadWhiteboards();
+            }
+
+            function wbGetPos(e) {
+            const rect = wbState.canvas.getBoundingClientRect();
+            return {
+            x: (e.clientX - rect.left) * (wbState.canvas.width / rect.width),
+            y: (e.clientY - rect.top) * (wbState.canvas.height / rect.height)
+            };
+            }
+
+            function wbStart(e) {
+            wbState.isDrawing = true;
+            const pos = wbGetPos(e);
+            wbState.startX = pos.x;
+            wbState.startY = pos.y;
+
+            if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
+            wbState.currentPath = {
+            type: 'path',
+            points: [{x: pos.x, y: pos.y}],
+            color: wbState.tool === 'eraser' ? '#ffffff' : wbState.color,
+            size: wbState.tool === 'eraser' ? wbState.size * 5 : wbState.size,
+            isEraser: wbState.tool === 'eraser'
+            };
+            } else if (wbState.tool === 'text') {
+            const text = prompt("Enter text:");
+            if (text) {
+            wbState.history.push({
+            type: 'text', x: pos.x, y: pos.y, text: text, color: wbState.color, size: wbState.size * 5
+            });
+            redrawCanvas();
+            saveWhiteboard(true);
+            }
+            wbState.isDrawing = false;
+            }
+            }
+
+            function wbMove(e) {
+            if (!wbState.isDrawing) return;
+            const pos = wbGetPos(e);
+
+            if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
+            wbState.currentPath.points.push({x: pos.x, y: pos.y});
+
+            const ctx = wbState.ctx;
+            ctx.beginPath();
+            const pts = wbState.currentPath.points;
+            if(pts.length > 1) {
+            ctx.moveTo(pts[pts.length-2].x, pts[pts.length-2].y);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.strokeStyle = wbState.currentPath.color;
+            ctx.lineWidth = wbState.currentPath.size;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            }
+            } else if (wbState.tool === 'shape') {
+            redrawCanvas();
+            const ctx = wbState.ctx;
+            ctx.beginPath();
+            ctx.strokeStyle = wbState.color;
+            ctx.lineWidth = wbState.size;
+
+            const w = pos.x - wbState.startX;
+            const h = pos.y - wbState.startY;
+
+            const shapeDef = SHAPES[wbState.shapeType];
+            if(shapeDef) {
+            shapeDef.path(ctx, wbState.startX, wbState.startY, w, h);
+            ctx.stroke();
+            }
+            }
+            }
+
+            function wbEnd(e) {
+            if (!wbState.isDrawing) return;
+            wbState.isDrawing = false;
+
+            if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
+            wbState.history.push(wbState.currentPath);
+            } else if (wbState.tool === 'shape') {
+            let pos;
+            try { pos = wbGetPos(e); } catch(ex) { return; }
+
+            const w = pos.x - wbState.startX;
+            const h = pos.y - wbState.startY;
+
+            if(Math.abs(w) > 5 || Math.abs(h) > 5) {
+            wbState.history.push({
+            type: 'shape',
+            shape: wbState.shapeType,
+            x: wbState.startX,
+            y: wbState.startY,
+            w: w, h: h,
+            color: wbState.color,
+            size: wbState.size
+            });
+            }
+            redrawCanvas();
+            }
+
+            saveWhiteboard(true);
+            }
+
+            function redrawCanvas() {
+            const ctx = wbState.ctx;
+            ctx.clearRect(0, 0, wbState.canvas.width, wbState.canvas.height);
+
+            wbState.history.forEach(action => {
+            ctx.beginPath();
+            if (action.type === 'path') {
+            ctx.strokeStyle = action.color;
+            ctx.lineWidth = action.size;
+            ctx.lineCap = 'round';
+            if(action.points.length > 0) {
+            ctx.moveTo(action.points[0].x, action.points[0].y);
+            for(let i=1; i<action.points.length; i++) { ctx.lineTo(action.points[i].x, action.points[i].y); } }
+              ctx.stroke(); } else if (action.type==='shape' ) { ctx.strokeStyle=action.color;
+              ctx.lineWidth=action.size; const def=SHAPES[action.shape]; if(def) def.path(ctx, action.x, action.y,
+              action.w, action.h); ctx.stroke(); } else if (action.type==='text' ) { ctx.fillStyle=action.color;
+              ctx.font=`${action.size * 3}px sans-serif`; ctx.fillText(action.text, action.x, action.y); } }); } // ---
+              Toolbar --- function setTool(tool) { wbState.tool=tool;
+              document.querySelectorAll('.wb-tool-btn').forEach(b=> b.classList.remove('active'));
+              document.getElementById(`tool-${tool === 'shape' ? 'shapes' : tool}`).classList.add('active');
+
+              if(tool !== 'shape') document.getElementById('wbShapePicker').style.display = 'none';
+              }
+
+              function setColor(c) { wbState.color = c; }
+              function setSize(s) { wbState.size = s; }
+
+              function toggleShapePicker() {
+              const p = document.getElementById('wbShapePicker');
+              p.style.display = p.style.display === 'grid' ? 'none' : 'grid';
+              }
+
+              function setShape(shape) {
+              wbState.tool = 'shape';
+              wbState.shapeType = shape;
+              document.querySelectorAll('.wb-tool-btn').forEach(b => b.classList.remove('active'));
+              document.getElementById('tool-shapes').classList.add('active');
+              toggleShapePicker();
+              }
+
+              function renderShapePicker() {
+              const picker = document.getElementById('wbShapePicker');
+              picker.innerHTML = '';
+              Object.keys(SHAPES).forEach(k => {
+              const div = document.createElement('div');
+              div.className = 'wb-shape-item';
+              div.innerHTML = `<span style="font-size:1.5rem;">${SHAPES[k].icon}</span>`;
+              div.title = SHAPES[k].name;
+              div.onclick = () => setShape(k);
+              picker.appendChild(div);
+              });
+              }
+
+              // --- Persistence ---
+              async function saveWhiteboardName() {
+              wbState.name = document.getElementById('wbTitle').value;
+              saveWhiteboard();
+              }
+
+              async function saveWhiteboard(silent=false) {
+              const status = document.getElementById('wbSaveStatus');
+              if(!silent) status.textContent = 'Saving...';
+
+              try {
+              const thumbCanvas = document.createElement('canvas');
+              thumbCanvas.width = 300; thumbCanvas.height = 200;
+              const tCtx = thumbCanvas.getContext('2d');
+              tCtx.fillStyle = 'white';
+              tCtx.fillRect(0,0,300,200);
+              tCtx.drawImage(wbState.canvas, 0, 0, 300, 200);
+              const thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
+
+              await api(`/api/whiteboards/${wbState.id}/save`, {
+              method: 'POST',
+              body: JSON.stringify({
+              name: wbState.name,
+              data: JSON.stringify(wbState.history),
+              thumbnail: thumb
+              })
+              });
+              status.textContent = 'Saved';
+              setTimeout(() => status.textContent = 'Saved', 2000);
+              } catch (e) {
+              status.textContent = 'Error Saving';
+              console.error(e);
+              }
+              }
+              </script>
 </body>
 
 </html>
