@@ -3375,12 +3375,7 @@
     // Legacy Whiteboard Logic Removed
 
 
-    // Inject listener setup into connectSocket
-    const originalConnect = connectSocket;
-    connectSocket = function (token) {
-      originalConnect(token); // Call original
-      setupWhiteboardSocket(); // Add WB listeners
-    };
+
 
     // Start
     if (localStorage.getItem('token')) {
