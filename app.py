@@ -17,7 +17,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from config import Config
 # Import DB and Models from models.py
 from models import db, User, EmailOTP, FriendRequest, Friend, Conversation, Participant, Group, GroupMember, Message, Reaction, MessageSeen, FriendRequest, \
-    Friend, Whiteboard
+    Friend, Whiteboard, Notepad
 
 # === Flask App Setup ===
 app = Flask(__name__)
@@ -1439,5 +1439,67 @@ def delete_whiteboard(board_id):
 
 
 # === Run ===
+
+@app.route('/api/notepads', methods=['GET'])
+@jwt_required()
+def get_notepads():
+    user_id = int(get_jwt_identity())
+    notes = Notepad.query.filter_by(user_id=user_id).order_by(Notepad.updated_at.desc()).all()
+    return jsonify([{
+        "id": n.id,
+        "name": n.name,
+        "content" : n.content,
+        "updated_at": n.updated_at.isoformat()
+    } for n in notes]), 200
+
+@app.route('/api/notepads', methods=['POST'])
+@jwt_required()
+def create_notepad():
+    user_id = int(get_jwt_identity())
+    data = request.get_json()
+    name = data.get('name', 'Untitled Note')
+    
+    note = Notepad(user_id=user_id, name=name, content="")
+    db.session.add(note)
+    db.session.commit()
+    return jsonify({"id": note.id, "name": note.name}), 201
+
+@app.route('/api/notepads/<int:id>', methods=['GET'])
+@jwt_required()
+def get_notepad(id):
+    user_id = int(get_jwt_identity())
+    note = Notepad.query.filter_by(id=id, user_id=user_id).first_or_404()
+    return jsonify({
+        "id": note.id,
+        "name": note.name,
+        "content": note.content,
+        "updated_at": note.updated_at.isoformat()
+    }), 200
+
+@app.route('/api/notepads/<int:id>', methods=['POST'])
+@jwt_required()
+def update_notepad(id):
+    user_id = int(get_jwt_identity())
+    note = Notepad.query.filter_by(id=id, user_id=user_id).first_or_404()
+    
+    data = request.get_json()
+    if 'name' in data:
+        note.name = data['name']
+    if 'content' in data:
+        note.content = data['content']
+    
+    db.session.commit()
+    return jsonify({"msg": "Saved"}), 200
+
+@app.route('/api/notepads/<int:id>', methods=['DELETE'])
+@jwt_required()
+def delete_notepad(id):
+    user_id = int(get_jwt_identity())
+    note = Notepad.query.filter_by(id=id, user_id=user_id).first_or_404()
+    db.session.delete(note)
+    db.session.commit()
+    return jsonify({"msg": "Deleted"}), 200
+
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+```

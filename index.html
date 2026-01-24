@@ -1277,6 +1277,7 @@
           </div>
           <div style="padding:0 10px 10px 10px;">
             <button onclick="showWhiteboardDashboard()">🎨 Whiteboard</button>
+            <button onclick="showNotepadDashboard()" style="margin-top:5px;">📝 Notepad</button>
           </div>
           <h4 style="padding:10px 16px;margin:0;">Chats</h4>
           <ul id="chatList" class="chat-list"></ul>
@@ -1335,6 +1336,43 @@
           </div>
           <div id="wbGrid" class="wb-grid">
             <!-- WB Cards loaded via JS -->
+          </div>
+        </div>
+
+        <!-- Notepad Dashboard -->
+        <div id="notepadDashboard" class="wb-dashboard hidden">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="margin:0;">My Notepads</h2>
+            <button onclick="backToSidebar()" class="secondary-btn">Back to Chat</button>
+          </div>
+          <div style="margin-bottom:20px;">
+            <button onclick="createNotepad()"
+              style="background:var(--primary-gradient); color:white; padding:10px 20px; border-radius:30px; font-weight:600;">+
+              New Note</button>
+          </div>
+          <div id="notepadGrid" class="wb-grid">
+            <!-- Note Cards loaded via JS -->
+          </div>
+        </div>
+
+        <!-- Notepad Editor UI (Standalone) -->
+        <div id="notepadUI" class="wb-ui hidden" style="background:#1e293b; display:none; flex-direction:column;">
+          <div class="wb-header">
+            <input type="text" id="noteTitle" value="Untitled Note"
+              style="width:100%; font-size:1.5rem; background:transparent; border:none; color:white; outline:none;"
+              placeholder="Note Title">
+            <div style="display:flex; gap:10px; align-items:center;">
+              <span id="noteSaveStatus" style="font-size:0.8rem; color:var(--text-muted);">Saved</span>
+              <button onclick="saveNotepad()"
+                style="background:var(--primary-gradient); color:white; padding:8px 20px; border-radius:20px;">Save</button>
+              <button onclick="closeNotepadUI()" class="secondary-btn"
+                style="background:rgba(255, 255, 255, 0.1); color:var(--text-main); border:1px solid var(--border-elegant);">Exit</button>
+            </div>
+          </div>
+          <div style="flex:1; padding:20px;">
+            <textarea id="noteContent"
+              style="width:100%; height:100%; background:rgba(255,255,255,0.05); border:none; color:var(--text-main); font-size:1.2rem; padding:20px; border-radius:10px; resize:none; outline:none;"
+              placeholder="Type something..."></textarea>
           </div>
         </div>
 
@@ -1572,7 +1610,7 @@
       <button class="wb-tool-btn" id="tool-select" onclick="setTool('select')" title="Select & Move">👆</button>
       <button class="wb-tool-btn active" id="tool-pen" onclick="setTool('pen')" title="Pen">✏️</button>
       <button class="wb-tool-btn" id="tool-eraser" onclick="setTool('eraser')" title="Eraser">🧹</button>
-      <button class="wb-tool-btn" id="tool-text" onclick="setTool('text')" title="Text">T</button>
+
       <button class="wb-tool-btn" id="tool-shapes" onclick="toggleShapePicker()" title="Shapes">🔶</button>
 
       <div style="height:1px; background:rgba(255,255,255,0.1); margin:5px 0;"></div>
@@ -1591,10 +1629,7 @@
     <div class="wb-canvas-container" id="wbCanvasContainer" style="position:relative;">
       <canvas id="wbCanvasNew"></canvas>
     </div>
-    <!-- Input Moved Here for Z-Index Safety -->
-    <input type="text" id="wbTextInput"
-      style="position:absolute; display:none; background:transparent; border:1px dashed #666; color:var(--text-main); font-size:16px; padding:2px; z-index:9999; outline:none;"
-      onblur="commitText()" onkeydown="handleTextKey(event)">
+
   </div>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
@@ -3412,15 +3447,140 @@
 
 
 
-    // Start
+
+    /* ================= Notepad Logic ================= */
+    let currentNoteId = null;
+
+    function showNotepadDashboard() {
+      document.getElementById('sidebar').classList.add('hidden');
+      if (window.innerWidth <= 768) {
+        document.querySelector('.sidebar').style.display = 'none';
+        document.querySelector('.main-chat').style.display = 'none';
+      }
+      chatArea.classList.add('hidden');
+      document.getElementById('welcomeScreen').classList.add('hidden');
+      document.getElementById('whiteboardDashboard').classList.add('hidden');
+      document.getElementById('notepadDashboard').classList.remove('hidden');
+      loadNotepads();
+    }
+
+    async function loadNotepads() {
+      const grid = document.getElementById('notepadGrid');
+      grid.innerHTML = '<p>Loading...</p>';
+      try {
+        const notes = await api('/api/notepads');
+        grid.innerHTML = '';
+        if (notes.length === 0) {
+          grid.innerHTML = '<p>No notes yet. Create one!</p>';
+          return;
+        }
+        notes.forEach(n => {
+          const card = document.createElement('div');
+          card.className = 'wb-card'; // Reuse WB card style
+          card.innerHTML = `
+                    <div class="wb-thumbnail" style="font-size:3rem; display:flex; align-items:center; justify-content:center;">📝</div>
+                    <div class="wb-title">${n.name}</div>
+                    <div class="wb-date">${new Date(n.updated_at).toLocaleDateString()}</div>
+                    <button onclick="deleteNotepad(event, ${n.id})" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border-radius:50%; width:24px; height:24px; display:flex; 
+                    align-items:center; justify-content:center; border:none;">✕</button>
+                `;
+          card.onclick = (e) => {
+            if (e.target.tagName === 'BUTTON') return;
+            openNotepad(n.id);
+          };
+          grid.appendChild(card);
+        });
+      } catch (e) {
+        grid.innerHTML = '<p style="color:red">Failed to load notepads</p>';
+      }
+    }
+
+    async function createNotepad() {
+      try {
+        const res = await api('/api/notepads', {
+          method: 'POST',
+          body: JSON.stringify({ name: "Untitled Note" })
+        });
+        openNotepad(res.id);
+      } catch (e) {
+        alert("Error creating note: " + e.message);
+      }
+    }
+
+    async function openNotepad(id) {
+      try {
+        const data = await api(`/api/notepads/${id}`);
+        currentNoteId = data.id;
+        document.getElementById('noteTitle').value = data.name;
+        document.getElementById('noteContent').value = data.content || '';
+        document.getElementById('notepadDashboard').classList.add('hidden');
+
+        const ui = document.getElementById('notepadUI');
+        ui.classList.remove('hidden');
+        ui.style.display = 'flex'; // Ensure flex layout
+      } catch (e) {
+        alert("Failed to open note: " + e.message);
+      }
+    }
+
+    async function saveNotepad() {
+      if (!currentNoteId) return;
+      const name = document.getElementById('noteTitle').value;
+      const content = document.getElementById('noteContent').value;
+      document.getElementById('noteSaveStatus').textContent = "Saving...";
+
+      try {
+        await api(`/api/notepads/${currentNoteId}`, {
+          method: 'POST',
+          body: JSON.stringify({ name, content })
+        });
+        document.getElementById('noteSaveStatus').textContent = "Saved";
+        setTimeout(() => {
+          document.getElementById('noteSaveStatus').textContent = "";
+        }, 2000);
+      } catch (e) {
+        document.getElementById('noteSaveStatus').textContent = "Error";
+        alert("Save failed: " + e.message);
+      }
+    }
+
+    async function deleteNotepad(e, id) {
+      e.stopPropagation();
+      if (!confirm("Delete this note?")) return;
+      try {
+        await api(`/api/notepads/${id}`, { method: 'DELETE' });
+        loadNotepads();
+      } catch (e) {
+        alert("Failed to delete");
+      }
+    }
+
+    function closeNotepadUI() {
+      document.getElementById('notepadUI').classList.add('hidden');
+      document.getElementById('notepadUI').style.display = 'none';
+      currentNoteId = null;
+      showNotepadDashboard();
+    }
+
+    // Auto-save on typing (debounce)
+    let noteTimeout;
+    document.getElementById('noteContent').addEventListener('input', () => {
+      document.getElementById('noteSaveStatus').textContent = "Unsaved...";
+      clearTimeout(noteTimeout);
+      noteTimeout = setTimeout(saveNotepad, 2000);
+    });
+    document.getElementById('noteTitle').addEventListener('input', () => {
+      document.getElementById('noteSaveStatus').textContent = "Unsaved...";
+      clearTimeout(noteTimeout);
+      noteTimeout = setTimeout(saveNotepad, 2000);
+    });
+
     // App Initialization
     if (localStorage.getItem('token')) {
       initApp();
-    } else {
     }
   </script>
   <script>
-    /* ================= Whiteboard Logic V2 (Standalone) ================= */
 
     // --- State & Constants ---
     const SHAPES = {
@@ -3796,10 +3956,6 @@
           wbState.selection = null;
         }
         redrawCanvas(); // To show selection highlight
-      } else if (wbState.tool === 'text') {
-        // Fix: Use clientX/Y directly for screen positioning of fixed element
-        wbShowTextInput(e.clientX, e.clientY, pos.x, pos.y);
-        wbState.isDrawing = false; // Text is managed by input now
       } else if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
         wbState.currentPath = {
           type: 'path',
@@ -3904,15 +4060,7 @@
       // Iterate backwards
       for (let i = wbState.history.length - 1; i >= 0; i--) {
         const item = wbState.history[i];
-        if (item.type === 'text') {
-          // Approximate text box
-          const fontSize = item.size * 3;
-          const width = item.text.length * fontSize * 0.6;
-          const height = fontSize;
-          if (x >= item.x && x <= item.x + width && y >= item.y - height && y <= item.y) {
-            return item;
-          }
-        } else if (item.type === 'shape') {
+        if (item.type === 'shape') {
           const minX = Math.min(item.x, item.x + item.w);
           const maxX = Math.max(item.x, item.x + item.w);
           const minY = Math.min(item.y, item.y + item.h);
@@ -3933,51 +4081,7 @@
       return null;
     }
 
-    function wbShowTextInput(clientX, clientY, canvasX, canvasY, val = '') {
-      const input = document.getElementById('wbTextInput');
-      input.style.display = 'block';
-      // Use client coordinates directly since input is fixed/absolute to viewport
-      input.style.left = clientX + 'px';
-      input.style.top = (clientY - 12) + 'px'; // -12 to center roughly on cursor
-
-      input.value = val;
-      // Style match
-      input.style.fontSize = (wbState.size * 3) + 'px';
-      input.style.color = wbState.color;
-      input.focus();
-
-      // Store creating pos (Internal Canvas Coords)
-      wbState.textX = canvasX;
-      wbState.textY = canvasY;
-    }
-
-    function commitText() {
-      const input = document.getElementById('wbTextInput');
-      if (input.style.display === 'none') return;
-      const text = input.value;
-      if (text) {
-        wbState.history.push({
-          type: 'text',
-          x: wbState.textX,
-          y: wbState.textY,
-          text: text,
-          color: wbState.color,
-          size: wbState.size * 5 // Align scale logic
-        });
-        redrawCanvas();
-        saveWhiteboard(true);
-      }
-      input.style.display = 'none';
-      input.value = '';
-    }
-
-    function handleTextKey(e) {
-      if (e.key === 'Enter') {
-        commitText();
-      } else if (e.key === 'Escape') {
-        document.getElementById('wbTextInput').style.display = 'none';
-      }
-    }
+    // Text tool removed per user request
 
     // Global Key Listener for Delete
     window.addEventListener('keydown', (e) => {
