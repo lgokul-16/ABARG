@@ -1119,9 +1119,6 @@
     }
 
     .wb-toolbar {
-      position: absolute;
-      top: 60px;
-      left: 0;
       width: 100%;
       background: var(--glass-panel-bg);
       backdrop-filter: blur(10px);
@@ -1133,6 +1130,17 @@
       gap: 20px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
       z-index: 10;
+      /* position: relative is default in flex flow */
+    }
+
+    .wb-canvas-container {
+      flex: 1;
+      /* Take remaining height */
+      position: relative;
+      overflow: hidden;
+      cursor: crosshair;
+      background: white;
+      /* Ensure bg is white/dark-ready */
     }
 
     .wb-tool-btn {
@@ -3771,7 +3779,10 @@
         }
         redrawCanvas(); // To show selection highlight
       } else if (wbState.tool === 'text') {
-        wbShowTextInput(pos.x, pos.y);
+        const rect = wbState.canvas.getBoundingClientRect();
+        const cssX = e.clientX - rect.left;
+        const cssY = e.clientY - rect.top;
+        wbShowTextInput(cssX, cssY, pos.x, pos.y);
         wbState.isDrawing = false; // Text is managed by input now
       } else if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
         wbState.currentPath = {
@@ -3906,20 +3917,20 @@
       return null;
     }
 
-    function wbShowTextInput(x, y, val = '') {
+    function wbShowTextInput(cssX, cssY, canvasX, canvasY, val = '') {
       const input = document.getElementById('wbTextInput');
       input.style.display = 'block';
-      input.style.left = (x - 2) + 'px'; // Adjust for border
-      input.style.top = (y - 12) + 'px'; // Adjust for font size alignment
+      input.style.left = (cssX) + 'px';
+      input.style.top = (cssY - 12) + 'px'; // Adjust for visual alignment
       input.value = val;
       // Style match
       input.style.fontSize = (wbState.size * 3) + 'px';
       input.style.color = wbState.color;
       input.focus();
 
-      // Store creating pos
-      wbState.textX = x;
-      wbState.textY = y;
+      // Store creating pos (Internal Canvas Coords)
+      wbState.textX = canvasX;
+      wbState.textY = canvasY;
     }
 
     function commitText() {
@@ -3949,6 +3960,28 @@
         document.getElementById('wbTextInput').style.display = 'none';
       }
     }
+
+    // Global Key Listener for Delete
+    window.addEventListener('keydown', (e) => {
+      // Only if whiteboard is visible
+      if (document.getElementById('whiteboardUI').classList.contains('hidden')) return;
+
+      // If typing in text input, don't delete
+      if (document.getElementById('wbTextInput').style.display === 'block') return;
+      if (e.target.tagName === 'INPUT') return; // Don't delete when typing in title
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (wbState.selection) {
+          const index = wbState.history.indexOf(wbState.selection);
+          if (index > -1) {
+            wbState.history.splice(index, 1);
+            wbState.selection = null;
+            redrawCanvas();
+            saveWhiteboard(true);
+          }
+        }
+      }
+    });
 
     function redrawCanvas() {
       const ctx = wbState.ctx;
