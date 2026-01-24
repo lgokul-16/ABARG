@@ -1590,10 +1590,11 @@
 
     <div class="wb-canvas-container" id="wbCanvasContainer" style="position:relative;">
       <canvas id="wbCanvasNew"></canvas>
-      <input type="text" id="wbTextInput"
-        style="position:absolute; display:none; background:transparent; border:1px dashed #666; color:var(--text-main); font-size:16px; padding:2px; z-index:2000; outline:none;"
-        onblur="commitText()" onkeydown="handleTextKey(event)">
     </div>
+    <!-- Input Moved Here for Z-Index Safety -->
+    <input type="text" id="wbTextInput"
+      style="position:absolute; display:none; background:transparent; border:1px dashed #666; color:var(--text-main); font-size:16px; padding:2px; z-index:9999; outline:none;"
+      onblur="commitText()" onkeydown="handleTextKey(event)">
   </div>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
@@ -3931,8 +3932,18 @@
     function wbShowTextInput(cssX, cssY, canvasX, canvasY, val = '') {
       const input = document.getElementById('wbTextInput');
       input.style.display = 'block';
-      input.style.left = (cssX) + 'px';
-      input.style.top = (cssY - 12) + 'px'; // Adjust for visual alignment
+
+      // Calculate screen coordinates
+      // Since input is now in .wb-ui (fixed), we need page/client coordinates
+      // cssX/Y passed from wbStart are relative to CANVAS container.
+      // We need to add the offset of the canvas container.
+      const rect = document.getElementById('wbCanvasNew').getBoundingClientRect();
+      const left = rect.left + cssX;
+      const top = rect.top + cssY;
+
+      input.style.left = left + 'px';
+      input.style.top = (top - 12) + 'px';
+
       input.value = val;
       // Style match
       input.style.fontSize = (wbState.size * 3) + 'px';
@@ -4223,6 +4234,15 @@
     }
 
     async function saveWhiteboard(silent = false) {
+      if (!wbState.id) {
+        // In chat mode, we don't save to a persistent ID yet (Live Sync handles it)
+        if (!silent) {
+          const status = document.getElementById('wbSaveStatus');
+          status.textContent = 'Saved (Chat)';
+          setTimeout(() => status.textContent = 'Saved', 2000);
+        }
+        return;
+      }
       const status = document.getElementById('wbSaveStatus');
       if (!silent) status.textContent = 'Saving...';
 
