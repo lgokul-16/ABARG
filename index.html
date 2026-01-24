@@ -3797,10 +3797,8 @@
         }
         redrawCanvas(); // To show selection highlight
       } else if (wbState.tool === 'text') {
-        const rect = wbState.canvas.getBoundingClientRect();
-        const cssX = e.clientX - rect.left;
-        const cssY = e.clientY - rect.top;
-        wbShowTextInput(cssX, cssY, pos.x, pos.y);
+        // Fix: Use clientX/Y directly for screen positioning of fixed element
+        wbShowTextInput(e.clientX, e.clientY, pos.x, pos.y);
         wbState.isDrawing = false; // Text is managed by input now
       } else if (wbState.tool === 'pen' || wbState.tool === 'eraser') {
         wbState.currentPath = {
@@ -3935,20 +3933,12 @@
       return null;
     }
 
-    function wbShowTextInput(cssX, cssY, canvasX, canvasY, val = '') {
+    function wbShowTextInput(clientX, clientY, canvasX, canvasY, val = '') {
       const input = document.getElementById('wbTextInput');
       input.style.display = 'block';
-
-      // Calculate screen coordinates
-      // Since input is now in .wb-ui (fixed), we need page/client coordinates
-      // cssX/Y passed from wbStart are relative to CANVAS container.
-      // We need to add the offset of the canvas container.
-      const rect = document.getElementById('wbCanvasNew').getBoundingClientRect();
-      const left = rect.left + cssX;
-      const top = rect.top + cssY;
-
-      input.style.left = left + 'px';
-      input.style.top = (top - 12) + 'px';
+      // Use client coordinates directly since input is fixed/absolute to viewport
+      input.style.left = clientX + 'px';
+      input.style.top = (clientY - 12) + 'px'; // -12 to center roughly on cursor
 
       input.value = val;
       // Style match
