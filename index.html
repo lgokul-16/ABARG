@@ -28,7 +28,8 @@
 
       --border-elegant: 1px solid rgba(255, 255, 255, 0.1);
 
-      --msg-bg-other: rgba(20, 20, 20, 0.6);
+      /* Refined Message Style (Glassy) */
+      --msg-bg-other: rgba(0, 0, 0, 0.3);
       --msg-bg-user: var(--primary-gradient);
 
       --item-hover-bg: rgba(255, 255, 255, 0.05);
@@ -42,7 +43,8 @@
       /* Light Mode Overrides */
       --bg-gradient: linear-gradient(120deg, #f0f4f8 0%, #d9e2ec 100%);
 
-      --glass-panel-bg: rgba(255, 255, 255, 0.75);
+      --glass-panel-bg: rgba(255, 255, 255, 0.85);
+      /* Increased opacity for light mode visibility */
       --glass-header-bg: rgba(255, 255, 255, 0.85);
       --glass-sidebar-bg: rgba(255, 255, 255, 0.5);
       --glass-input-bg: rgba(255, 255, 255, 0.8);
@@ -474,6 +476,13 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      padding: 20px 10%;
+      /* Reduce spread by adding horizontal padding */
+      max-width: 1000px;
+      /* Constrain reading width */
+      margin: 0 auto;
+      /* Center the stream */
+      width: 100%;
     }
 
     #chat-background {
@@ -597,7 +606,10 @@
       /* Dark glass message */
       color: var(--text-main);
       border-bottom-left-radius: 4px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      /* Add glass blur */
       /* keep subtle */
     }
 
@@ -785,6 +797,27 @@
 
     .member-item:hover {
       background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Search Results Visibility Fix */
+    #searchResults {
+      background: var(--glass-header-bg);
+      border: var(--glass-border);
+      border-radius: 12px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    #searchResults div {
+      padding: 10px;
+      color: var(--text-main);
+      /* Ensure visible in light mode */
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+    }
+
+    #searchResults div:hover {
+      background: var(--item-hover-bg);
     }
 
     /* Adjust specific text colors which might be hardcoded in HTML - Handled by class selection */
