@@ -60,6 +60,34 @@
       --item-hover-bg: rgba(0, 0, 0, 0.05);
     }
 
+    /* NEW: Notepad Styles via CSS for light/dark support */
+    #notepadUI {
+      background: var(--glass-panel-bg);
+      backdrop-filter: blur(20px);
+    }
+
+    .notepad-title-input {
+      width: 100%;
+      font-size: 1.5rem;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    .notepad-textarea {
+      width: 100%;
+      height: 100%;
+      background: var(--glass-input-bg);
+      border: var(--border-elegant);
+      color: var(--text-main);
+      font-size: 1.2rem;
+      padding: 20px;
+      border-radius: 10px;
+      resize: none;
+      outline: none;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -1356,10 +1384,9 @@
         </div>
 
         <!-- Notepad Editor UI (Standalone) -->
-        <div id="notepadUI" class="wb-ui hidden" style="background:#1e293b; display:none; flex-direction:column;">
+        <div id="notepadUI" class="wb-ui hidden" style="display:none; flex-direction:column;">
           <div class="wb-header">
-            <input type="text" id="noteTitle" value="Untitled Note"
-              style="width:100%; font-size:1.5rem; background:transparent; border:none; color:white; outline:none;"
+            <input type="text" id="noteTitle" value="Untitled Note" class="notepad-title-input"
               placeholder="Note Title">
             <div style="display:flex; gap:10px; align-items:center;">
               <span id="noteSaveStatus" style="font-size:0.8rem; color:var(--text-muted);">Saved</span>
@@ -1370,9 +1397,7 @@
             </div>
           </div>
           <div style="flex:1; padding:20px;">
-            <textarea id="noteContent"
-              style="width:100%; height:100%; background:rgba(255,255,255,0.05); border:none; color:var(--text-main); font-size:1.2rem; padding:20px; border-radius:10px; resize:none; outline:none;"
-              placeholder="Type something..."></textarea>
+            <textarea id="noteContent" class="notepad-textarea" placeholder="Type something..."></textarea>
           </div>
         </div>
 
@@ -2582,13 +2607,15 @@
 
 
     function addMessageToUI(msg) {
-      if (
-        (currentChatType === 'private' && msg.conversation_id && currentChatId !== msg.conversation_id) || // Wait, socket event might not have conv_id?
-        // Actually socket room filtering handles this usually, but good to check.
-        // However, msg object from backend might not have conv_id if we didn't add it in emit.
-        // Let's trust logic for now.
-        false
-      ) return;
+      // STRICT FILTERING: Only show message if it belongs to current open chat
+      if (msg.conversation_id) {
+        if (currentChatType !== 'private' || currentChatId != msg.conversation_id) return;
+      } else if (msg.group_id) {
+        if (currentChatType !== 'group' || currentChatId != msg.group_id) return;
+      } else {
+        // Unknown message type?
+        return;
+      }
 
       // Handle Optimistic Replacement
       if (msg.client_temp_id) {
