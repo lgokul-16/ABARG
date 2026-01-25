@@ -541,6 +541,8 @@ def chat_history(conversation_id):
             "content": msg.content,
             "image_url": msg.image_url,
             "timestamp": msg.timestamp.isoformat() + 'Z',
+            "conversation_id": msg.conversation_id,
+            "group_id": msg.group_id,
             "reactions": reaction_counts,
             "seen_by": seen_map.get(msg.id, [])
         })
@@ -617,6 +619,8 @@ def group_chat_history(group_id):
             "content": msg.content,
             "image_url": msg.image_url,
             "timestamp": msg.timestamp.isoformat() + 'Z',
+            "group_id": msg.group_id,
+            "conversation_id": None, 
             "reactions": reaction_counts,
             "seen_by": seen_map.get(msg.id, [])
         })
