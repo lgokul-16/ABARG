@@ -133,3 +133,11 @@ class Notepad(db.Model):
     content = db.Column(db.Text, nullable=True) # Large text field
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class Status(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    type = db.Column(db.String(10), nullable=False) # 'text', 'image', 'video'
+    content = db.Column(db.Text, nullable=True) # URL or Text
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False) # 24h expiration

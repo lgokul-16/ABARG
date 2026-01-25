@@ -147,6 +147,140 @@
       position: relative;
     }
 
+    /* Sidebar Tabs layout */
+    .sidebar-tabs {
+      display: flex;
+      padding: 10px;
+      gap: 5px;
+    }
+
+    .sidebar-tab {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .sidebar-tab.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      display: none;
+      /* Toggled */
+    }
+
+    .sidebar-content.active {
+      display: block;
+    }
+
+    /* Status UI */
+    .status-item {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-radius: var(--radius-md);
+    }
+
+    .status-item:hover {
+      background: var(--item-hover-bg);
+    }
+
+    .status-ring {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      padding: 2px;
+      background: var(--text-muted);
+      /* Read/Default */
+      margin-right: 12px;
+    }
+
+    .status-ring.unread {
+      background: var(--primary-gradient);
+    }
+
+    .status-ring img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--glass-sidebar-bg);
+      /* Gap effect */
+    }
+
+    /* Status Viewer Overlay */
+    #statusViewer {
+      position: fixed;
+      inset: 0;
+      background: black;
+      z-index: 5000;
+      display: none;
+      flex-direction: column;
+    }
+
+    #statusProgressContainer {
+      display: flex;
+      gap: 4px;
+      padding: 10px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 5001;
+    }
+
+    .status-progress-bar {
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .status-progress-fill {
+      height: 100%;
+      background: white;
+      width: 0%;
+    }
+
+    #statusContentArea {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    #statusContentArea img,
+    #statusContentArea video {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .status-text-view {
+      font-size: 2rem;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      background: var(--primary-gradient);
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     /* Common Buttons */
     button {
       cursor: pointer;
@@ -476,9 +610,9 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      padding: 20px 10%;
+      padding: 20px;
       /* Reduce spread by adding horizontal padding */
-      max-width: 1000px;
+      max-width: 1400px;
       /* Constrain reading width */
       margin: 0 auto;
       /* Center the stream */
@@ -683,6 +817,30 @@
     .seen-status:hover {
       background: rgba(255, 255, 255, 0.2);
     }
+
+    /* Fixed Search Result Item */
+    .search-result-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      color: var(--text-main);
+    }
+
+    .search-result-item:hover {
+      background: var(--item-hover-bg);
+    }
+
+    .search-result-item img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
 
     /* Input Area */
     .input-area {
@@ -1337,17 +1495,64 @@
       <div class="layout-wrapper">
         <div id="sidebar" class="sidebar">
           <div style="padding:10px;">
-            <button onclick="showAddFriend()">+ Add Friend</button>
+            <!-- Tools remain but maybe less prominent or integrated? User said create sidebar LIKE chats/groups/status -->
+            <!-- We keep tools at top or bottom? Let's keep top for now as "Apps" -->
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+              <button onclick="showWhiteboardDashboard()" style="flex:1; font-size:0.8rem; padding:8px;">🎨 WB</button>
+              <button onclick="showNotepadDashboard()" style="flex:1; font-size:0.8rem; padding:8px;">📝 Note</button>
+            </div>
           </div>
-          <div style="padding:0 10px 10px 10px;">
-            <button onclick="showWhiteboardDashboard()">🎨 Whiteboard</button>
-            <button onclick="showNotepadDashboard()" style="margin-top:5px;">📝 Notepad</button>
+
+          <!-- TABS -->
+          <div class="sidebar-tabs">
+            <div class="sidebar-tab active" onclick="switchSidebarTab('chats')">Chats</div>
+            <div class="sidebar-tab" onclick="switchSidebarTab('groups')">Groups</div>
+            <div class="sidebar-tab" onclick="switchSidebarTab('status')">Status</div>
           </div>
-          <h4 style="padding:10px 16px;margin:0;">Chats</h4>
-          <ul id="chatList" class="chat-list"></ul>
-          <h4 style="padding:10px 16px;margin:0;">Groups</h4>
-          <ul id="groupList" class="chat-list" style="flex:1;"></ul> <!-- Ensure this takes space if empty -->
-          <div id="incomingRequests"></div>
+
+          <!-- CONTENT: CHATS -->
+          <div id="tab-chats" class="sidebar-content active">
+            <div style="padding:10px;">
+              <button onclick="showAddFriend()">+ Add Friend</button>
+            </div>
+            <ul id="chatList" class="chat-list"></ul>
+            <div id="incomingRequests"></div>
+          </div>
+
+          <!-- CONTENT: GROUPS -->
+          <div id="tab-groups" class="sidebar-content">
+            <!-- No built-in list logic yet, assuming groupList is populated same as chats -->
+            <div style="padding:10px;">
+              <button onclick="showCreateGroup()">+ New Group</button>
+            </div>
+            <ul id="groupList" class="chat-list"></ul>
+          </div>
+
+          <!-- CONTENT: STATUS -->
+          <div id="tab-status" class="sidebar-content">
+            <div style="padding:10px; border-bottom:1px solid rgba(255,255,255,0.1);">
+              <div class="status-item" onclick="triggerStatusUpload()">
+                <div class="status-ring">
+                  <img id="myStatusImg" src="" onerror="this.src='https://ui-avatars.com/api/?name=Me'">
+                  <div
+                    style="position:absolute; bottom:0; right:0; background:green; color:white; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:1rem; border:2px solid #1e293b;">
+                    +</div>
+                </div>
+                <div>
+                  <div style="font-weight:600;">My Status</div>
+                  <div style="font-size:0.8rem; color:var(--text-muted);">Tap to add update</div>
+                </div>
+              </div>
+              <input type="file" id="statusUploadInput" hidden accept="image/*,video/*"
+                onchange="handleStatusFile(this)">
+            </div>
+
+            <div style="padding:10px 16px; font-size:0.8rem; font-weight:700; color:var(--text-muted);">RECENT UPDATES
+            </div>
+            <div id="statusList">
+              <!-- Status items go here -->
+            </div>
+          </div>
         </div>
 
         <div id="chatArea" class="main-chat hidden">
@@ -1447,6 +1652,23 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Status Viewer -->
+    <div id="statusViewer">
+      <div id="statusProgressContainer"></div>
+      <div style="position:absolute; top:20px; left:20px; z-index:5002; display:flex; align-items:center;">
+        <img id="statusViewDp" src=""
+          style="width:40px; height:40px; border-radius:50%; margin-right:10px; border:1px solid white;">
+        <div>
+          <div id="statusViewName" style="color:white; font-weight:600;">User</div>
+          <div id="statusViewTime" style="color:rgba(255,255,255,0.7); font-size:0.8rem;">Just now</div>
+        </div>
+      </div>
+      <button onclick="closeStatusViewer()"
+        style="position:absolute; top:20px; right:20px; z-index:5002; background:none; border:none; color:white; font-size:2rem;">✕</button>
+
+      <div id="statusContentArea" onclick="nextStatusStep()"></div>
     </div>
 
     <!-- Modals -->
@@ -2502,7 +2724,231 @@
       }
     }
 
-    // Friends
+    // --- Sidebar Tabs & Status Logic ---
+    function switchSidebarTab(tab) {
+      document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
+
+      // Activate
+      // Note: we identify tabs by onclick text or just hardcode classes? 
+      // Simpler: querying by text content or index? Let's use event target in HTML or just selector
+      // Actually I am passing string 'chats' etc.
+
+      const tabs = document.querySelectorAll('.sidebar-tab');
+      if (tab === 'chats') tabs[0].classList.add('active');
+      if (tab === 'groups') tabs[1].classList.add('active');
+      if (tab === 'status') {
+        tabs[2].classList.add('active');
+        loadStatuses(); // Reload when opening
+      }
+
+      document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+
+    function triggerStatusUpload() {
+      document.getElementById('statusUploadInput').click();
+    }
+
+    async function handleStatusFile(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      // Video Duration Check
+      if (file.type.startsWith('video/')) {
+        const duration = await getVideoDuration(file);
+        if (duration > 15.5) { // 15s tolerance
+          alert("Video is too long! Max 15 seconds.");
+          input.value = '';
+          return;
+        }
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const token = localStorage.getItem('token');
+        // Show loading?
+        const res = await fetch(API_BASE + '/api/status', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        if (res.ok) {
+          alert("Status uploaded!");
+          loadStatuses();
+        } else {
+          alert("Upload failed");
+        }
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+
+    function getVideoDuration(file) {
+      return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = function () {
+          window.URL.revokeObjectURL(video.src);
+          resolve(video.duration);
+        }
+        video.onerror = function () { reject("Invalid video"); }
+        video.src = URL.createObjectURL(file);
+      });
+    }
+
+    let statusData_Friends = [];
+    let statusData_My = []; // Array of status objects
+
+    async function loadStatuses() {
+      try {
+        const data = await api('/api/status');
+        statusData_My = data.my_status || [];
+        statusData_Friends = data.friends_status || [];
+
+        // Update My Status UI
+        const myImg = document.getElementById('myStatusImg');
+        if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image; // Or last status thumb?
+
+        // Render Friends List
+        const list = document.getElementById('statusList');
+        list.innerHTML = '';
+
+        if (statusData_Friends.length === 0) {
+          list.innerHTML = '<div style="padding:20px; text-align:center; color:gray;">No recent updates</div>';
+        }
+
+        statusData_Friends.forEach((fGroup, idx) => {
+          const item = document.createElement('div');
+          item.className = 'status-item';
+
+          // Ring check: any unread? For now assume all valid/unread for visual pop
+          const isUnread = true;
+
+          item.innerHTML = `
+                   <div class="status-ring ${isUnread ? 'unread' : ''}">
+                      <img src="${avatar(fGroup.profile_image, fGroup.username)}">
+                   </div>
+                   <div>
+                      <div style="font-weight:600;">${fGroup.username}</div>
+                      <div style="font-size:0.8rem; color:var(--text-muted);">${new Date(fGroup.last_update).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                   </div>
+                `;
+          item.onclick = () => openStatusViewer(idx);
+          list.appendChild(item);
+        });
+
+      } catch (e) { console.error("Load status error", e); }
+    }
+
+    // Status Viewer Logic
+    let currentViewerGroupIdx = -1;
+    let currentViewerItemIdx = 0;
+    let statusTimer = null;
+    let currentStatusGroup = null; // { user_id, username, statuses: [] }
+
+    function openStatusViewer(groupIdx) {
+      currentViewerGroupIdx = groupIdx;
+      currentStatusGroup = statusData_Friends[groupIdx];
+      currentViewerItemIdx = 0; // Start from first? Or first unread? Simple: first.
+
+      if (!currentStatusGroup || !currentStatusGroup.statuses.length) return;
+
+      document.getElementById('statusViewer').style.display = 'flex';
+      showStatusItem();
+    }
+
+    function closeStatusViewer() {
+      document.getElementById('statusViewer').style.display = 'none';
+      clearTimeout(statusTimer);
+      const vid = document.querySelector('#statusContentArea video');
+      if (vid) vid.pause();
+    }
+
+    function showStatusItem() {
+      clearTimeout(statusTimer);
+      const content = document.getElementById('statusContentArea');
+      content.innerHTML = '';
+
+      if (currentViewerItemIdx >= currentStatusGroup.statuses.length) {
+        // End of this user's statuses -> Next user?
+        if (currentViewerGroupIdx + 1 < statusData_Friends.length) {
+          currentViewerGroupIdx++;
+          currentStatusGroup = statusData_Friends[currentViewerGroupIdx];
+          currentViewerItemIdx = 0;
+          showStatusItem();
+        } else {
+          closeStatusViewer();
+        }
+        return;
+      }
+
+      const status = currentStatusGroup.statuses[currentViewerItemIdx];
+
+      // Header Info
+      document.getElementById('statusViewName').textContent = currentStatusGroup.username;
+      document.getElementById('statusViewDp').src = avatar(currentStatusGroup.profile_image, currentStatusGroup.username);
+      document.getElementById('statusViewTime').textContent = new Date(status.created_at).toLocaleString();
+
+      // Render Progress Bars
+      const progressContainer = document.getElementById('statusProgressContainer');
+      progressContainer.innerHTML = '';
+      currentStatusGroup.statuses.forEach((_, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'status-progress-bar';
+        const fill = document.createElement('div');
+        fill.className = 'status-progress-fill';
+
+        if (i < currentViewerItemIdx) fill.style.width = '100%';
+        else if (i === currentViewerItemIdx) fill.style.width = '0%'; // Will animate
+        else fill.style.width = '0%';
+
+        bar.appendChild(fill);
+        progressContainer.appendChild(bar);
+      });
+
+      // Content
+      let duration = 5000; // Default 5s for image/text
+
+      if (status.type === 'text') {
+        content.innerHTML = `<div class="status-text-view">${status.content}</div>`;
+      } else if (status.type === 'image') {
+        content.innerHTML = `<img src="${status.content}">`;
+      } else if (status.type === 'video') {
+        const vid = document.createElement('video');
+        vid.src = status.content;
+        vid.autoplay = true;
+        // vid.muted = false; // Policies might block audio autoplay
+        vid.onloadedmetadata = () => {
+          duration = vid.duration * 1000;
+          startProgress(duration);
+        };
+        vid.onended = () => nextStatusStep();
+        content.appendChild(vid);
+        return; // Wait for metadata for timer
+      }
+
+      startProgress(duration);
+    }
+
+    function startProgress(duration) {
+      // Animate current bar
+      const bars = document.getElementsByClassName('status-progress-fill');
+      if (bars[currentViewerItemIdx]) {
+        bars[currentViewerItemIdx].style.transition = `width ${duration}ms linear`;
+        // Trigger reflow?
+        setTimeout(() => {
+          bars[currentViewerItemIdx].style.width = '100%';
+        }, 50);
+      }
+      statusTimer = setTimeout(nextStatusStep, duration);
+    }
+
+    function nextStatusStep() {
+      currentViewerItemIdx++;
+      showStatusItem();
+    }
     function showAddFriend() {
       document.getElementById('addFriendModal').classList.remove('hidden');
     }
@@ -3208,6 +3654,25 @@
         }
       });
 
+      socket.on('incoming_call', async (data) => {
+        // ... (existing logic)
+        // Store extra data for UI use
+        data.callerName = "Unknown";
+        data.callerDp = null;
+
+        try {
+          const friends = await api('/friends');
+          const friend = friends.find(f => f.id === data.from);
+          if (friend) {
+            data.callerName = friend.username;
+            data.callerDp = friend.profile_image;
+          }
+        } catch (e) { }
+
+        window.incomingCallData = data;
+      });
+
+
       socket.on('call_ended', () => {
         // Clear everything
         endCall(false);
@@ -3236,7 +3701,10 @@
       stopRingtone();
       const data = window.incomingCallData;
 
-      showCallOverlay("Connected", null);
+      showCallOverlay(window.incomingCallData.callerName || "Connected", null);
+      if (window.incomingCallData.callerName && window.incomingCallData.callerDp) {
+        document.getElementById('callAvatar').src = avatar(window.incomingCallData.callerDp, window.incomingCallData.callerName);
+      }
       document.getElementById('callStatus').textContent = "Connecting...";
 
       try {
@@ -3358,8 +3826,10 @@
         name = callNameEl.textContent;
       } else if (currentChatName) {
         name = currentChatName;
+      } else if (window.incomingCallData && window.incomingCallData.callerName) {
+        name = window.incomingCallData.callerName;
       } else if (window.incomingCallData && window.incomingCallData.from) {
-        name = window.incomingCallData.from;
+        name = "User " + window.incomingCallData.from;
       }
 
       miniStatus.textContent = `On call with ${name}`;

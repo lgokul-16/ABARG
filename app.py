@@ -17,7 +17,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from config import Config
 # Import DB and Models from models.py
 from models import db, User, EmailOTP, FriendRequest, Friend, Conversation, Participant, Group, GroupMember, Message, Reaction, MessageSeen, FriendRequest, \
-    Friend, Whiteboard, Notepad
+    Friend, Whiteboard, Notepad, Status
 
 # === Flask App Setup ===
 app = Flask(__name__)
@@ -1505,6 +1505,128 @@ def delete_notepad(id):
     db.session.delete(note)
     db.session.commit()
     return jsonify({"msg": "Deleted"}), 200
+
+    return jsonify({"msg": "Deleted"}), 200
+
+# === Status Routes ===
+
+@app.route('/api/status', methods=['POST'])
+@jwt_required()
+def upload_status():
+    user_id = int(get_jwt_identity())
+    
+    # Handle Text Status
+    if request.content_type.startswith('application/json'):
+        data = request.get_json()
+        content = data.get('content')
+        if not content:
+             return jsonify({'msg': 'No content'}), 400
+        
+        status = Status(
+            user_id=user_id,
+            type='text',
+            content=content,
+            expires_at=datetime.utcnow() + timedelta(hours=24)
+        )
+        db.session.add(status)
+        db.session.commit()
+        return jsonify({'msg': 'Status posted'}), 200
+    
+    # Handle File Status (Image/Video)
+    if 'file' not in request.files:
+         return jsonify({'msg': 'No file'}), 400
+         
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    ext = filename.split('.')[-1].lower()
+    
+    if ext in ['png', 'jpg', 'jpeg', 'webp']:
+        status_type = 'image'
+    elif ext in ['mp4', 'webm']:
+        status_type = 'video'
+        # Video Duration Check needs to be client-side usually for simple uploads, 
+        # or we use ffprobe here. For now rely on frontend validation but we trust user slightly.
+        # Or better: check size as rough proxy? No. 
+        # We will strictly enforce in frontend, backend accepts.
+    else:
+        return jsonify({'msg': 'Invalid file type'}), 400
+        
+    try:
+        url = upload_file_helper(file)
+        status = Status(
+            user_id=user_id, 
+            type=status_type, 
+            content=url,
+            expires_at=datetime.utcnow() + timedelta(hours=24)
+        )
+        db.session.add(status)
+        db.session.commit()
+        return jsonify({'msg': 'Status posted'}), 200
+    except Exception as e:
+        print(f"Status upload error: {e}")
+        return jsonify({'msg': 'Upload failed'}), 500
+
+@app.route('/api/status', methods=['GET'])
+@jwt_required()
+def get_statuses():
+    user_id = int(get_jwt_identity())
+    
+    # Get My Statuses
+    my_statuses = Status.query.filter_by(user_id=user_id)\
+        .filter(Status.expires_at > datetime.utcnow())\
+        .order_by(Status.created_at.asc()).all()
+        
+    # Get Friends' Statuses
+    # 1. Find friends
+    friends = Friend.query.filter((Friend.user_id == user_id) | (Friend.friend_id == user_id)).all()
+    friend_ids = [f.friend_id if f.user_id == user_id else f.user_id for f in friends]
+    
+    # 2. Query statuses
+    # We want grouped by user? Or just flat list sorted by recent?
+    # WhatsApp style: Grouped by User, with latest update timestamp.
+    
+    raw_statuses = Status.query.filter(Status.user_id.in_(friend_ids))\
+        .filter(Status.expires_at > datetime.utcnow())\
+        .order_by(Status.created_at.asc()).all()
+        
+    # Group manually
+    friends_status_map = {}
+    for s in raw_statuses:
+        if s.user_id not in friends_status_map:
+            friends_status_map[s.user_id] = []
+        friends_status_map[s.user_id].append({
+            "id": s.id,
+            "type": s.type,
+            "content": s.content,
+            "created_at": s.created_at.isoformat() + 'Z'
+        })
+        
+    # Format for response
+    # We need user details for each friend group
+    result_friends = []
+    for fid, statuses in friends_status_map.items():
+        user = db.session.get(User, fid)
+        if user:
+            result_friends.append({
+                "user_id": user.id,
+                "username": user.username,
+                "profile_image": user.profile_image,
+                "statuses": statuses,
+                "last_update": statuses[-1]['created_at']
+            })
+    
+    # Sort friends by last update
+    result_friends.sort(key=lambda x: x['last_update'], reverse=True)
+    
+    return jsonify({
+        "my_status": [{
+            "id": s.id,
+            "type": s.type,
+            "content": s.content,
+            "created_at": s.created_at.isoformat() + 'Z'
+        } for s in my_statuses],
+        "friends_status": result_friends
+    }), 200
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
