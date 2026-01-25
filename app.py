@@ -1051,6 +1051,8 @@ def handle_message(data):
         'content': msg.content,
         'image_url': msg.image_url,
         'timestamp': msg.timestamp.isoformat() + 'Z',
+        'conversation_id': msg.conversation_id,
+        'group_id': msg.group_id,
         'reactions': {}
     }, room=room)
 
