@@ -1590,9 +1590,9 @@ def upload_status():
     filename = secure_filename(file.filename)
     ext = filename.split('.')[-1].lower()
     
-    if ext in ['png', 'jpg', 'jpeg', 'webp']:
+    if ext in ['png', 'jpg', 'jpeg', 'webp', 'gif']:
         status_type = 'image'
-    elif ext in ['mp4', 'webm']:
+    elif ext in ['mp4', 'webm', 'mov', 'avi', 'wmv', 'mkv', 'flv', 'hevc']:
         status_type = 'video'
         # Video Duration Check needs to be client-side usually for simple uploads, 
         # or we use ffprobe here. For now rely on frontend validation but we trust user slightly.

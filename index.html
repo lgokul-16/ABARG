@@ -2841,17 +2841,26 @@
       if (!file) return;
 
       // Video Duration Check
-      if (file.type.startsWith('video/')) {
-        const duration = await getVideoDuration(file);
-        if (duration > 15.5) { // 15s tolerance
-          alert("Video is too long! Max 15 seconds.");
-          input.value = '';
-          return;
+      if (file.type.startsWith('video/') || file.type === '') {
+        try {
+          const duration = await getVideoDuration(file);
+          if (duration > 30.5) {
+            alert("Video is too long! Max 30 seconds.");
+            input.value = '';
+            return;
+          }
+        } catch (e) {
+          console.warn("Could not validate video duration (format might not be supported by browser):", e);
+          // We allow it to proceed, assuming backend handles storage. 
+          // Viewer might not play it if browser doesn't support it, but user asked for support.
         }
       }
 
       const formData = new FormData();
       formData.append('file', file);
+
+      // ... (rest of upload)
+
 
       try {
         const token = localStorage.getItem('token');
@@ -2945,65 +2954,67 @@
             // Main click -> Open Viewer
             myStatusItem.onclick = () => openMyStatusViewer();
 
+            // Clean up any existing buttons first (Fixes Double Plus Glitch)
+            myStatusItem.querySelectorAll('.status-add-btn-overlay').forEach(el => el.remove());
+
             // Add (+) Button if not exists
-            let plusBtn = myStatusItem.querySelector('.status-add-btn-overlay');
-            if (!plusBtn) {
-              plusBtn = document.createElement('div');
-              plusBtn.className = 'status-add-btn-overlay';
-              // Style it
-              plusBtn.style.position = 'absolute';
-              plusBtn.style.bottom = '5px';
-              plusBtn.style.right = '5px';
-              plusBtn.style.width = '20px';
-              plusBtn.style.height = '20px';
-              plusBtn.style.background = '#22c55e';
-              plusBtn.style.borderRadius = '50%';
-              plusBtn.style.display = 'flex';
-              plusBtn.style.alignItems = 'center';
-              plusBtn.style.justifyContent = 'center';
-              plusBtn.style.color = 'white';
-              plusBtn.style.fontSize = '14px';
-              plusBtn.style.fontWeight = 'bold';
-              plusBtn.innerHTML = '+';
-              plusBtn.style.border = '2px solid var(--glass-panel-bg)';
+            let plusBtn = document.createElement('div');
+            plusBtn.className = 'status-add-btn-overlay';
 
-              // Search for ring container to append to
-              const ring = myStatusItem.querySelector('.status-ring');
-              if (ring) ring.style.position = 'relative'; // ensure relative
-              if (ring) ring.appendChild(plusBtn);
+            plusBtn.style.position = 'absolute';
+            plusBtn.style.bottom = '5px';
+            plusBtn.style.right = '5px';
+            plusBtn.style.width = '20px';
+            plusBtn.style.height = '20px';
 
-              // Click handler
-              plusBtn.onclick = (e) => {
-                e.stopPropagation();
-                triggerStatusUpload();
-              };
-            }
-          } else {
-            if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image;
-            // No status -> Main click uploads
-            myStatusItem.onclick = () => triggerStatusUpload();
-            // Remove plus btn if exists
-            const plusBtn = myStatusItem.querySelector('.status-add-btn-overlay');
-            if (plusBtn) plusBtn.remove();
+            plusBtn.style.background = '#22c55e';
+            plusBtn.style.borderRadius = '50%';
+            plusBtn.style.display = 'flex';
+            plusBtn.style.alignItems = 'center';
+            plusBtn.style.justifyContent = 'center';
+            plusBtn.style.color = 'white';
+            plusBtn.style.fontSize = '14px';
+            plusBtn.style.fontWeight = 'bold';
+            plusBtn.innerHTML = '+';
+            plusBtn.style.border = '2px solid var(--glass-panel-bg)';
+
+            // Search for ring container to append to
+            const ring = myStatusItem.querySelector('.status-ring');
+            if (ring) ring.style.position = 'relative'; // ensure relative
+            if (ring) ring.appendChild(plusBtn);
+
+            // Click handler
+            plusBtn.onclick = (e) => {
+              e.stopPropagation();
+              triggerStatusUpload();
+            };
           }
+        } else {
+          if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image;
+          // No status -> Main click uploads
+          myStatusItem.onclick = () => triggerStatusUpload();
+          // Remove plus btn if exists
+          const plusBtn = myStatusItem.querySelector('.status-add-btn-overlay');
+          if (plusBtn) plusBtn.remove();
         }
+      }
 
         // Render Friends List
         const list = document.getElementById('statusList');
-        list.innerHTML = '';
+      list.innerHTML = '';
 
-        if (statusData_Friends.length === 0) {
-          list.innerHTML = '<div style="padding:20px; text-align:center; color:gray;">No recent updates</div>';
-        }
+      if (statusData_Friends.length === 0) {
+        list.innerHTML = '<div style="padding:20px; text-align:center; color:gray;">No recent updates</div>';
+      }
 
-        statusData_Friends.forEach((fGroup, idx) => {
-          const item = document.createElement('div');
-          item.className = 'status-item';
+      statusData_Friends.forEach((fGroup, idx) => {
+        const item = document.createElement('div');
+        item.className = 'status-item';
 
-          // Ring check: any unread? For now assume all valid/unread for visual pop
-          const isUnread = true;
+        // Ring check: any unread? For now assume all valid/unread for visual pop
+        const isUnread = true;
 
-          item.innerHTML = `
+        item.innerHTML = `
                    <div class="status-ring ${isUnread ? 'unread' : ''}">
                       <img src="${avatar(fGroup.profile_image, fGroup.username)}">
                    </div>
@@ -3012,11 +3023,11 @@
                       <div style="font-size:0.8rem; color:var(--text-muted);">${new Date(fGroup.last_update).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                    </div>
                 `;
-          item.onclick = () => openStatusViewer(idx);
-          list.appendChild(item);
-        });
+        item.onclick = () => openStatusViewer(idx);
+        list.appendChild(item);
+      });
 
-      } catch (e) { console.error("Load status error", e); }
+    } catch (e) { console.error("Load status error", e); }
     }
 
     // Status Viewer Logic
