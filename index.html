@@ -2945,9 +2945,6 @@
         const myStatusItem = document.querySelector('.status-item'); // Assuming first one is "My Status"
 
         if (myStatusItem) {
-          // Reset existing listeners to avoid dupes? Since we clear list below, but MyStatus is static above list
-          // Just overwrite onclick
-
           if (statusData_My.length > 0) {
             if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image;
 
@@ -2960,13 +2957,11 @@
             // Add (+) Button if not exists
             let plusBtn = document.createElement('div');
             plusBtn.className = 'status-add-btn-overlay';
-
             plusBtn.style.position = 'absolute';
             plusBtn.style.bottom = '5px';
             plusBtn.style.right = '5px';
             plusBtn.style.width = '20px';
             plusBtn.style.height = '20px';
-
             plusBtn.style.background = '#22c55e';
             plusBtn.style.borderRadius = '50%';
             plusBtn.style.display = 'flex';
@@ -2980,7 +2975,7 @@
 
             // Search for ring container to append to
             const ring = myStatusItem.querySelector('.status-ring');
-            if (ring) ring.style.position = 'relative'; // ensure relative
+            if (ring) ring.style.position = 'relative';
             if (ring) ring.appendChild(plusBtn);
 
             // Click handler
@@ -2988,33 +2983,30 @@
               e.stopPropagation();
               triggerStatusUpload();
             };
+          } else {
+            if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image;
+            // No status -> Main click uploads
+            myStatusItem.onclick = () => triggerStatusUpload();
+            // Remove plus btn if exists
+            const plusBtn = myStatusItem.querySelector('.status-add-btn-overlay');
+            if (plusBtn) plusBtn.remove();
           }
-        } else {
-          if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image;
-          // No status -> Main click uploads
-          myStatusItem.onclick = () => triggerStatusUpload();
-          // Remove plus btn if exists
-          const plusBtn = myStatusItem.querySelector('.status-add-btn-overlay');
-          if (plusBtn) plusBtn.remove();
         }
-      }
 
         // Render Friends List
         const list = document.getElementById('statusList');
-      list.innerHTML = '';
+        list.innerHTML = '';
 
-      if (statusData_Friends.length === 0) {
-        list.innerHTML = '<div style="padding:20px; text-align:center; color:gray;">No recent updates</div>';
-      }
+        if (statusData_Friends.length === 0) {
+          list.innerHTML = '<div style="padding:20px; text-align:center; color:gray;">No recent updates</div>';
+        }
 
-      statusData_Friends.forEach((fGroup, idx) => {
-        const item = document.createElement('div');
-        item.className = 'status-item';
+        statusData_Friends.forEach((fGroup, idx) => {
+          const item = document.createElement('div');
+          item.className = 'status-item';
+          const isUnread = true;
 
-        // Ring check: any unread? For now assume all valid/unread for visual pop
-        const isUnread = true;
-
-        item.innerHTML = `
+          item.innerHTML = `
                    <div class="status-ring ${isUnread ? 'unread' : ''}">
                       <img src="${avatar(fGroup.profile_image, fGroup.username)}">
                    </div>
@@ -3023,11 +3015,11 @@
                       <div style="font-size:0.8rem; color:var(--text-muted);">${new Date(fGroup.last_update).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                    </div>
                 `;
-        item.onclick = () => openStatusViewer(idx);
-        list.appendChild(item);
-      });
+          item.onclick = () => openStatusViewer(idx);
+          list.appendChild(item);
+        });
 
-    } catch (e) { console.error("Load status error", e); }
+      } catch (e) { console.error("Load status error", e); }
     }
 
     // Status Viewer Logic
