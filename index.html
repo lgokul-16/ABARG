@@ -1668,7 +1668,7 @@
       <button onclick="closeStatusViewer()"
         style="position:absolute; top:20px; right:20px; z-index:5002; background:none; border:none; color:white; font-size:2rem;">✕</button>
 
-      <div id="statusContentArea" onclick="nextStatusStep()"></div>
+      <div id="statusContentArea"></div>
     </div>
 
     <!-- Modals -->
@@ -2778,7 +2778,8 @@
           alert("Status uploaded!");
           loadStatuses();
         } else {
-          alert("Upload failed");
+          const errData = await res.json();
+          alert(errData.msg || "Upload failed");
         }
       } catch (e) {
         alert("Error: " + e.message);
@@ -2847,15 +2848,29 @@
     let currentViewerItemIdx = 0;
     let statusTimer = null;
     let currentStatusGroup = null; // { user_id, username, statuses: [] }
+    let statusStartTime = 0;
+    let isPaused = false;
+    let remainingTime = 0;
+    let currentDuration = 5000;
 
     function openStatusViewer(groupIdx) {
       currentViewerGroupIdx = groupIdx;
       currentStatusGroup = statusData_Friends[groupIdx];
-      currentViewerItemIdx = 0; // Start from first? Or first unread? Simple: first.
+      currentViewerItemIdx = 0;
 
       if (!currentStatusGroup || !currentStatusGroup.statuses.length) return;
 
-      document.getElementById('statusViewer').style.display = 'flex';
+      const viewer = document.getElementById('statusViewer');
+      viewer.style.display = 'flex';
+
+      // Setup interaction listeners
+      const area = document.getElementById('statusContentArea');
+      // Remove old listeners to be safe (though usually overwritten)
+      area.onpointerdown = handleStatusDown;
+      area.onpointerup = handleStatusUp;
+      // Prevent context menu on long press
+      area.oncontextmenu = (e) => { e.preventDefault(); return false; };
+
       showStatusItem();
     }
 
@@ -2864,6 +2879,7 @@
       clearTimeout(statusTimer);
       const vid = document.querySelector('#statusContentArea video');
       if (vid) vid.pause();
+      isPaused = false;
     }
 
     function showStatusItem() {
@@ -2871,8 +2887,22 @@
       const content = document.getElementById('statusContentArea');
       content.innerHTML = '';
 
+      // Check Bounds
+      if (currentViewerItemIdx < 0) {
+        // Go to previous user
+        if (currentViewerGroupIdx > 0) {
+          currentViewerGroupIdx--;
+          currentStatusGroup = statusData_Friends[currentViewerGroupIdx];
+          currentViewerItemIdx = currentStatusGroup.statuses.length - 1;
+          showStatusItem();
+        } else {
+          closeStatusViewer();
+        }
+        return;
+      }
+
       if (currentViewerItemIdx >= currentStatusGroup.statuses.length) {
-        // End of this user's statuses -> Next user?
+        // End of this user's statuses -> Next user
         if (currentViewerGroupIdx + 1 < statusData_Friends.length) {
           currentViewerGroupIdx++;
           currentStatusGroup = statusData_Friends[currentViewerGroupIdx];
@@ -2901,7 +2931,7 @@
         fill.className = 'status-progress-fill';
 
         if (i < currentViewerItemIdx) fill.style.width = '100%';
-        else if (i === currentViewerItemIdx) fill.style.width = '0%'; // Will animate
+        else if (i === currentViewerItemIdx) fill.style.width = '0%';
         else fill.style.width = '0%';
 
         bar.appendChild(fill);
@@ -2909,7 +2939,7 @@
       });
 
       // Content
-      let duration = 5000; // Default 5s for image/text
+      currentDuration = 5000; // Default
 
       if (status.type === 'text') {
         content.innerHTML = `<div class="status-text-view">${status.content}</div>`;
@@ -2919,35 +2949,100 @@
         const vid = document.createElement('video');
         vid.src = status.content;
         vid.autoplay = true;
+        vid.playsInline = true;
         // vid.muted = false; // Policies might block audio autoplay
         vid.onloadedmetadata = () => {
-          duration = vid.duration * 1000;
-          startProgress(duration);
+          currentDuration = vid.duration * 1000;
+          if (!isPaused) startProgress(currentDuration);
         };
-        vid.onended = () => nextStatusStep();
+        vid.onended = () => navigateStatus(1);
         content.appendChild(vid);
-        return; // Wait for metadata for timer
+        return; // Wait for metadata
       }
 
-      startProgress(duration);
+      if (!isPaused) startProgress(currentDuration);
     }
 
     function startProgress(duration) {
-      // Animate current bar
+      statusStartTime = Date.now();
+      remainingTime = duration;
+
       const bars = document.getElementsByClassName('status-progress-fill');
       if (bars[currentViewerItemIdx]) {
         bars[currentViewerItemIdx].style.transition = `width ${duration}ms linear`;
-        // Trigger reflow?
+        // Trigger reflow
         setTimeout(() => {
-          bars[currentViewerItemIdx].style.width = '100%';
+          if (!isPaused) bars[currentViewerItemIdx].style.width = '100%';
         }, 50);
       }
-      statusTimer = setTimeout(nextStatusStep, duration);
+      statusTimer = setTimeout(() => navigateStatus(1), duration);
     }
 
-    function nextStatusStep() {
-      currentViewerItemIdx++;
+    function navigateStatus(dir) {
+      currentViewerItemIdx += dir;
       showStatusItem();
+    }
+
+    // Interaction Logic
+    let holdTimer;
+    let holdStartTs;
+
+    function handleStatusDown(e) {
+      isPaused = true;
+      holdStartTs = Date.now();
+
+      // Pause Timer
+      clearTimeout(statusTimer);
+
+      // Calculate remaining time
+      const elapsed = Date.now() - statusStartTime;
+      remainingTime = Math.max(0, currentDuration - elapsed);
+
+      // Pause Animation
+      const bars = document.getElementsByClassName('status-progress-fill');
+      if (bars[currentViewerItemIdx]) {
+        const computedStyle = window.getComputedStyle(bars[currentViewerItemIdx]);
+        const width = computedStyle.width;
+        bars[currentViewerItemIdx].style.transition = 'none';
+        bars[currentViewerItemIdx].style.width = width;
+      }
+
+      // Pause Video if active
+      const vid = document.querySelector('#statusContentArea video');
+      if (vid) vid.pause();
+    }
+
+    function handleStatusUp(e) {
+      const holdDuration = Date.now() - holdStartTs;
+      isPaused = false;
+
+      // If held less than 200ms, treat as Tap
+      if (holdDuration < 200) {
+        const rect = e.target.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        // Left 30% -> Prev, Right 70% -> Next
+        if (x < rect.width * 0.3) {
+          navigateStatus(-1);
+        } else {
+          navigateStatus(1);
+        }
+      } else {
+        // Resume
+        const bars = document.getElementsByClassName('status-progress-fill');
+        if (bars[currentViewerItemIdx]) {
+          bars[currentViewerItemIdx].style.transition = `width ${remainingTime}ms linear`;
+          setTimeout(() => {
+            bars[currentViewerItemIdx].style.width = '100%';
+          }, 50);
+        }
+
+        statusTimer = setTimeout(() => navigateStatus(1), remainingTime);
+        statusStartTime = Date.now(); // Reset start time for accurate subsequent pause
+        currentDuration = remainingTime; // Update duration base
+
+        const vid = document.querySelector('#statusContentArea video');
+        if (vid) vid.play();
+      }
     }
     function showAddFriend() {
       document.getElementById('addFriendModal').classList.remove('hidden');

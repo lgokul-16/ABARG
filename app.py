@@ -1514,6 +1514,11 @@ def delete_notepad(id):
 def upload_status():
     user_id = int(get_jwt_identity())
     
+    # Limit to 5 active statuses
+    active_count = Status.query.filter_by(user_id=user_id).filter(Status.expires_at > datetime.utcnow()).count()
+    if active_count >= 5:
+        return jsonify({'msg': 'Maximum 5 active statuses allowed'}), 400
+
     # Handle Text Status
     if request.content_type.startswith('application/json'):
         data = request.get_json()
