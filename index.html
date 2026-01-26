@@ -1500,6 +1500,70 @@
       font-weight: 600;
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
     }
+
+    /* ================= MOBILE RESPONSIVENESS ================= */
+    @media (max-width: 768px) {
+      .container {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        border: none;
+      }
+
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        display: flex;
+        /* Default show sidebar */
+      }
+
+      .main-chat {
+        display: none;
+        /* Default hide chat */
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Toggle Classes for Mobile */
+      .sidebar.hidden {
+        display: none !important;
+      }
+
+      .main-chat.active {
+        display: flex !important;
+      }
+
+      #mobileBackBtn {
+        display: block !important;
+        /* Show back button */
+      }
+
+      /* Adjust Headers */
+      .app-header {
+        padding: 10px 15px;
+      }
+
+      .app-header span {
+        font-size: 1.4rem;
+      }
+
+      .wb-dashboard,
+      .wb-ui {
+        z-index: 6000;
+        /* Ensure on top of sidebar */
+      }
+    }
+
+    /* Desktop Back Button Hide */
+    #mobileBackBtn {
+      display: none;
+      background: transparent;
+      font-size: 1.5rem;
+      border: none;
+      color: var(--text-main);
+      margin-right: 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 
@@ -2434,12 +2498,12 @@
     }
 
     function backToSidebar() {
-      document.querySelector('.layout-wrapper').classList.remove('show-chat');
       document.getElementById('sidebar').classList.remove('hidden');
-      if (window.innerWidth <= 768) {
-        document.querySelector('.sidebar').style.display = 'flex';
-        document.querySelector('.main-chat').style.display = 'flex';
-      }
+      document.getElementById('chatArea').classList.remove('active');
+
+      // Reset any inline styles if they exist
+      document.querySelector('.sidebar').style.display = '';
+      document.querySelector('.main-chat').style.display = '';
       document.getElementById('whiteboardDashboard').classList.add('hidden');
       document.getElementById('notepadDashboard').classList.add('hidden'); // Fix: Hide Notepad too
       document.getElementById('welcomeScreen').classList.remove('hidden');
@@ -2467,7 +2531,8 @@
       chatArea.classList.remove('hidden');
 
       // Mobile View Toggle
-      document.querySelector('.layout-wrapper').classList.add('show-chat');
+      document.getElementById('sidebar').classList.add('hidden');
+      document.getElementById('chatArea').classList.add('active');
 
       try {
         // Fetch full profile to get Description (since friend list might be stale or simple)
@@ -2532,7 +2597,8 @@
       chatArea.classList.remove('hidden');
 
       // Mobile View Toggle
-      document.querySelector('.layout-wrapper').classList.add('show-chat');
+      document.getElementById('sidebar').classList.add('hidden');
+      document.getElementById('chatArea').classList.add('active');
 
 
       // Reset UI
@@ -4048,12 +4114,35 @@
     function endCall(emitEvent = true) {
       hideCallOverlay();
       candidateQueue = []; // Clear queue
+
+      // Stop Local Media
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
       }
+
+      // Stop Screen Share if active (Fixes persisting UI and stream)
+      if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+        screenStream = null;
+        // Reset UI button state
+        const btn = document.querySelector('.btn-screen');
+        if (btn) btn.style.background = 'rgba(255,255,255,0.2)';
+      }
+
       if (peerConnection) {
         peerConnection.close();
         peerConnection = null;
+      }
+
+      // Clear Remote Video (Fixes Black Box on Next Call)
+      const vid = document.getElementById('remoteVideo');
+      if (vid) {
+        vid.pause();
+        vid.removeAttribute('src');
+        vid.removeAttribute('srcObject');
+        vid.srcObject = null;
+        vid.style.display = 'none';
       }
 
       // Cleanup Mini Widget
@@ -4062,6 +4151,8 @@
 
       if (emitEvent && currentChatFriendId) {
         socket.emit('end_call', { to: currentChatFriendId });
+        // Also emit stop_screen_share just in case to clear remote side
+        socket.emit('stop_screen_share', { to: currentChatFriendId });
       }
     }
 
@@ -4106,16 +4197,20 @@
       overlay.classList.add('hidden');
       miniWidget.classList.remove('hidden');
 
-      // Determine name: Use chat name or incoming call data
+      // Determine name logic
       let name = "Unknown";
-      const callNameEl = document.getElementById('callName');
 
-      if (callNameEl && callNameEl.textContent && callNameEl.textContent !== "Unknown") {
-        name = callNameEl.textContent;
-      } else if (currentChatName) {
+      const callNameEl = document.getElementById('callName');
+      const overlayName = callNameEl ? callNameEl.textContent : "";
+
+      if (currentChatName) {
         name = currentChatName;
+      } else if (overlayName && overlayName !== "Unknown" && overlayName !== "Connected" && overlayName !== "Calling...") {
+        name = overlayName;
       } else if (window.incomingCallData && window.incomingCallData.callerName) {
         name = window.incomingCallData.callerName;
+      } else if (overlayName) {
+        name = overlayName; // Fallback to "Connected" or whatever
       } else if (window.incomingCallData && window.incomingCallData.from) {
         name = "User " + window.incomingCallData.from;
       }
@@ -4275,10 +4370,9 @@
 
     function showNotepadDashboard() {
       document.getElementById('sidebar').classList.add('hidden');
-      if (window.innerWidth <= 768) {
-        document.querySelector('.sidebar').style.display = 'none';
-        document.querySelector('.main-chat').style.display = 'none';
-      }
+      // Inline style cleanup handled by class
+      // document.querySelector('.sidebar').style.display = 'none'; 
+      // document.querySelector('.main-chat').style.display = 'none';
       chatArea.classList.add('hidden');
       document.getElementById('welcomeScreen').classList.add('hidden');
       document.getElementById('whiteboardDashboard').classList.add('hidden');
@@ -4638,10 +4732,9 @@
     // --- Dashboard ---
     function showWhiteboardDashboard() {
       document.getElementById('sidebar').classList.add('hidden');
-      if (window.innerWidth <= 768) {
-        document.querySelector('.sidebar').style.display = 'none';
-        document.querySelector('.main-chat').style.display = 'none';
-      }
+      // Inline cleanup
+      // document.querySelector('.sidebar').style.display = 'none';
+      // document.querySelector('.main-chat').style.display = 'none';
       chatArea.classList.add('hidden');
       document.getElementById('welcomeScreen').classList.add('hidden');
       document.getElementById('whiteboardDashboard').classList.remove('hidden');
