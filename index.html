@@ -2873,6 +2873,30 @@
       }
     }
 
+    function openMyStatusViewer() {
+      // Mock a group for "Me"
+      currentStatusGroup = {
+        user_id: currentUser.id,
+        username: "You",
+        profile_image: currentUser.profile_image,
+        statuses: statusData_My,
+        isMe: true
+      };
+      currentViewerGroupIdx = -1; // Special index
+      currentViewerItemIdx = 0;
+
+      document.getElementById('statusViewer').style.display = 'flex';
+      setupViewerListeners();
+      showStatusItem();
+    }
+
+    function setupViewerListeners() {
+      const area = document.getElementById('statusContentArea');
+      area.onpointerdown = handleStatusDown;
+      area.onpointerup = handleStatusUp;
+      area.oncontextmenu = (e) => { e.preventDefault(); return false; };
+    }
+
     async function deleteStatus(statusId) {
       if (!confirm("Delete this status update?")) return;
       try {
@@ -2909,22 +2933,59 @@
 
         // Update My Status UI
         const myImg = document.getElementById('myStatusImg');
-        if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image;
-
-        // Add click handler to view My Status
         const myStatusItem = document.querySelector('.status-item'); // Assuming first one is "My Status"
+
         if (myStatusItem) {
-          myStatusItem.onclick = () => {
-            if (statusData_My.length > 0) {
-              // Hack: treat my status as a "group" at index -1 or similar?
-              // Easier: Prepend "Me" to the friend viewing list temporarily?
-              // Or separate viewer logic.
-              // Quickest: Reuse openStatusViewer with a special flag/index
-              openMyStatusViewer();
-            } else {
-              triggerStatusUpload();
+          // Reset existing listeners to avoid dupes? Since we clear list below, but MyStatus is static above list
+          // Just overwrite onclick
+
+          if (statusData_My.length > 0) {
+            if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image;
+
+            // Main click -> Open Viewer
+            myStatusItem.onclick = () => openMyStatusViewer();
+
+            // Add (+) Button if not exists
+            let plusBtn = myStatusItem.querySelector('.status-add-btn-overlay');
+            if (!plusBtn) {
+              plusBtn = document.createElement('div');
+              plusBtn.className = 'status-add-btn-overlay';
+              // Style it
+              plusBtn.style.position = 'absolute';
+              plusBtn.style.bottom = '5px';
+              plusBtn.style.right = '5px';
+              plusBtn.style.width = '20px';
+              plusBtn.style.height = '20px';
+              plusBtn.style.background = '#22c55e';
+              plusBtn.style.borderRadius = '50%';
+              plusBtn.style.display = 'flex';
+              plusBtn.style.alignItems = 'center';
+              plusBtn.style.justifyContent = 'center';
+              plusBtn.style.color = 'white';
+              plusBtn.style.fontSize = '14px';
+              plusBtn.style.fontWeight = 'bold';
+              plusBtn.innerHTML = '+';
+              plusBtn.style.border = '2px solid var(--glass-panel-bg)';
+
+              // Search for ring container to append to
+              const ring = myStatusItem.querySelector('.status-ring');
+              if (ring) ring.style.position = 'relative'; // ensure relative
+              if (ring) ring.appendChild(plusBtn);
+
+              // Click handler
+              plusBtn.onclick = (e) => {
+                e.stopPropagation();
+                triggerStatusUpload();
+              };
             }
-          };
+          } else {
+            if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image;
+            // No status -> Main click uploads
+            myStatusItem.onclick = () => triggerStatusUpload();
+            // Remove plus btn if exists
+            const plusBtn = myStatusItem.querySelector('.status-add-btn-overlay');
+            if (plusBtn) plusBtn.remove();
+          }
         }
 
         // Render Friends List
@@ -5070,7 +5131,8 @@
       }
     };
 
-    // Update commitText to emit
+    /* 
+    // Update commitText to emit - REMOVED as commitText is not defined
     const originalCommitText = commitText;
     commitText = function () {
       const len = wbState.history.length;
@@ -5086,6 +5148,7 @@
         });
       }
     };
+    */
 
     // Update global delete listener to emit (skipping complex ID logic for now)
     // We will confirm delete works locally first. Syncing delete requires IDs. 
