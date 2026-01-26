@@ -17,7 +17,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from config import Config
 # Import DB and Models from models.py
 from models import db, User, EmailOTP, FriendRequest, Friend, Conversation, Participant, Group, GroupMember, Message, Reaction, MessageSeen, FriendRequest, \
-    Friend, Whiteboard, Notepad, Status
+    Friend, Whiteboard, Notepad, Status, StatusLike
 
 # === Flask App Setup ===
 app = Flask(__name__)
@@ -1509,6 +1509,38 @@ def delete_notepad(id):
 
 # === Status Routes ===
 
+@app.route('/api/status/<int:status_id>/like', methods=['POST'])
+@jwt_required()
+def like_status(status_id):
+    user_id = int(get_jwt_identity())
+    status = db.session.get(Status, status_id)
+    if not status:
+        return jsonify({'msg': 'Status not found'}), 404
+        
+    existing_like = StatusLike.query.filter_by(status_id=status_id, user_id=user_id).first()
+    if existing_like:
+        db.session.delete(existing_like)
+        liked = False
+    else:
+        new_like = StatusLike(status_id=status_id, user_id=user_id)
+        db.session.add(new_like)
+        liked = True
+        
+    db.session.commit()
+    
+    # Get current count
+    count = StatusLike.query.filter_by(status_id=status_id).count()
+    
+    # Emit socket event for real-time update
+    socketio.emit('status_like_update', {
+        'status_id': status_id,
+        'count': count,
+        'liked': liked, # This is specific to the user triggering it, but clients can use count
+        'user_id': user_id
+    })
+    
+    return jsonify({'msg': 'Success', 'liked': liked, 'count': count}), 200
+
 @app.route('/api/status', methods=['POST'])
 @jwt_required()
 def upload_status():
@@ -1575,6 +1607,19 @@ def upload_status():
 def get_statuses():
     user_id = int(get_jwt_identity())
     
+    # Helper to format status
+    def format_status(s):
+        likes_count = StatusLike.query.filter_by(status_id=s.id).count()
+        is_liked = StatusLike.query.filter_by(status_id=s.id, user_id=user_id).first() is not None
+        return {
+            "id": s.id,
+            "type": s.type,
+            "content": s.content,
+            "created_at": s.created_at.isoformat() + 'Z',
+            "likes_count": likes_count,
+            "is_liked": is_liked
+        }
+
     # Get My Statuses
     my_statuses = Status.query.filter_by(user_id=user_id)\
         .filter(Status.expires_at > datetime.utcnow())\
@@ -1586,8 +1631,6 @@ def get_statuses():
     friend_ids = [f.friend_id if f.user_id == user_id else f.user_id for f in friends]
     
     # 2. Query statuses
-    # We want grouped by user? Or just flat list sorted by recent?
-    # WhatsApp style: Grouped by User, with latest update timestamp.
     
     raw_statuses = Status.query.filter(Status.user_id.in_(friend_ids))\
         .filter(Status.expires_at > datetime.utcnow())\
@@ -1598,12 +1641,7 @@ def get_statuses():
     for s in raw_statuses:
         if s.user_id not in friends_status_map:
             friends_status_map[s.user_id] = []
-        friends_status_map[s.user_id].append({
-            "id": s.id,
-            "type": s.type,
-            "content": s.content,
-            "created_at": s.created_at.isoformat() + 'Z'
-        })
+        friends_status_map[s.user_id].append(format_status(s))
         
     # Format for response
     # We need user details for each friend group
@@ -1623,14 +1661,54 @@ def get_statuses():
     result_friends.sort(key=lambda x: x['last_update'], reverse=True)
     
     return jsonify({
-        "my_status": [{
-            "id": s.id,
-            "type": s.type,
-            "content": s.content,
-            "created_at": s.created_at.isoformat() + 'Z'
-        } for s in my_statuses],
+        "my_status": [format_status(s) for s in my_statuses],
         "friends_status": result_friends
     }), 200
+
+
+# === Share Routes (Clone) ===
+@app.route('/api/whiteboards/<int:wb_id>/share', methods=['POST'])
+@jwt_required()
+def share_whiteboard(wb_id):
+    user_id = int(get_jwt_identity())
+    data = request.get_json()
+    target_user_id = data.get('target_user_id')
+    
+    original = db.session.get(Whiteboard, wb_id)
+    if not original or original.owner_id != user_id:
+         return jsonify({'msg': 'Whiteboard not found or permission denied'}), 403
+         
+    # Clone
+    new_wb = Whiteboard(
+        name=f"{original.name} (Shared)",
+        owner_id=target_user_id,
+        data=original.data,
+        thumbnail=original.thumbnail
+    )
+    db.session.add(new_wb)
+    db.session.commit()
+    return jsonify({'msg': 'Shared successfully'}), 200
+
+@app.route('/api/notepads/<int:note_id>/share', methods=['POST'])
+@jwt_required()
+def share_notepad(note_id):
+    user_id = int(get_jwt_identity())
+    data = request.get_json()
+    target_user_id = data.get('target_user_id')
+    
+    original = db.session.get(Notepad, note_id)
+    if not original or original.user_id != user_id:
+         return jsonify({'msg': 'Notepad not found or permission denied'}), 403
+         
+    # Clone
+    new_note = Notepad(
+        name=f"{original.name} (Shared)",
+        user_id=target_user_id,
+        content=original.content
+    )
+    db.session.add(new_note)
+    db.session.commit()
+    return jsonify({'msg': 'Shared successfully'}), 200
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

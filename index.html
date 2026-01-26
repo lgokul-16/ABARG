@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
@@ -1445,6 +1446,55 @@
       background: rgba(255, 255, 255, 0.2);
       transform: scale(1.1);
     }
+
+    /* Status Like */
+    .status-like-container {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 5003;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-like-btn {
+      font-size: 2rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+      filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5));
+    }
+
+    .status-like-btn:active {
+      transform: scale(0.8);
+    }
+
+    .status-like-btn.liked {
+      color: #ef4444;
+      animation: likePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes likePop {
+      0% {
+        transform: scale(0.5);
+      }
+
+      50% {
+        transform: scale(1.3);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .status-like-count {
+      color: white;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
   </style>
 </head>
 
@@ -1633,6 +1683,12 @@
               <span id="noteSaveStatus" style="font-size:0.8rem; color:var(--text-muted);">Saved</span>
               <button onclick="saveNotepad()"
                 style="background:var(--primary-gradient); color:white; padding:8px 20px; border-radius:20px;">Save</button>
+              <button onclick="downloadNotepadPDF()"
+                style="background:rgba(255, 255, 255, 0.1); color:white; padding:8px 15px; border-radius:15px; font-size:1.2rem;"
+                title="Download PDF">📄</button>
+              <button onclick="openShareModal('notepad', currentNoteId)"
+                style="background:rgba(255, 255, 255, 0.1); color:white; padding:8px 15px; border-radius:15px; font-size:1.2rem;"
+                title="Share Copy">📤</button>
               <button onclick="closeNotepadUI()" class="secondary-btn"
                 style="background:rgba(255, 255, 255, 0.1); color:var(--text-main); border:1px solid var(--border-elegant);">Exit</button>
             </div>
@@ -1669,6 +1725,12 @@
         style="position:absolute; top:20px; right:20px; z-index:5002; background:none; border:none; color:white; font-size:2rem;">✕</button>
 
       <div id="statusContentArea"></div>
+
+      <div class="status-like-container">
+        <div id="statusLikeBtn" class="status-like-btn"
+          onclick="toggleStatusLike(currentStatusGroup.statuses[currentViewerItemIdx].id)">🤍</div>
+        <div id="statusLikeCount" class="status-like-count"></div>
+      </div>
     </div>
 
     <!-- Modals -->
@@ -1744,6 +1806,18 @@
         <div style="margin-top:20px;">
           <button onclick="document.getElementById('seenDetailsModal').classList.add('hidden')" class="secondary-btn"
             style="width:100%;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="shareItemModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Share With</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:10px;">Select a friend to send a copy.</p>
+        <div class="member-list" id="shareFriendList" style="max-height: 300px; overflow-y: auto;"></div>
+        <div style="margin-top:20px;">
+          <button onclick="document.getElementById('shareItemModal').classList.add('hidden')" class="secondary-btn"
+            style="width:100%;">Cancel</button>
         </div>
       </div>
     </div>
@@ -1883,6 +1957,9 @@
         <span id="wbSaveStatus" style="font-size:0.8rem; color:var(--text-muted);">Saved</span>
         <button onclick="saveWhiteboard()"
           style="background:var(--primary-gradient); color:white; padding:8px 20px; border-radius:20px;">Save</button>
+        <button onclick="openShareModal('whiteboard', wbState.id)"
+          style="background:rgba(255, 255, 255, 0.1); color:white; padding:8px 15px; border-radius:15px; font-size:1.2rem;"
+          title="Share Copy">📤</button>
         <button onclick="closeWhiteboardUI()" class="secondary-btn"
           style="background:rgba(255, 255, 255, 0.1); color:var(--text-main); border:1px solid var(--border-elegant);">Exit</button>
       </div>
@@ -2937,6 +3014,9 @@
         bar.appendChild(fill);
         progressContainer.appendChild(bar);
       });
+
+      // Update Like UI
+      updateLikeUI(status.likes_count, status.is_liked);
 
       // Content
       currentDuration = 5000; // Default
@@ -5004,6 +5084,153 @@
         status.textContent = 'Error Saving';
         console.error(e);
       }
+    }
+    // --- Status Like Logic ---
+    async function toggleStatusLike(statusId) {
+      try {
+        const res = await api(`/api/status/${statusId}/like`, { method: 'POST' });
+        // Socket will handle UI update, but we can optimistically update if single user
+        // Actually, let's rely on socket or response for consistency
+        if (currentStatusGroup && currentViewerItemIdx >= 0) {
+          const status = currentStatusGroup.statuses[currentViewerItemIdx];
+          if (status.id === statusId) {
+            status.likes_count = res.count;
+            status.is_liked = res.liked;
+            updateLikeUI(res.count, res.liked);
+          }
+        }
+      } catch (e) {
+        console.error("Like failed", e);
+      }
+    }
+
+    function updateLikeUI(count, isLiked) {
+      const btn = document.getElementById('statusLikeBtn');
+      const countEl = document.getElementById('statusLikeCount');
+      if (btn) {
+        btn.textContent = isLiked ? '❤️' : '🤍';
+        btn.className = `status-like-btn ${isLiked ? 'liked' : ''}`;
+      }
+      if (countEl) {
+        countEl.textContent = count > 0 ? count : '';
+      }
+    }
+
+    // Connect socket listener
+    const originalConnect2 = connectSocket;
+    connectSocket = function (token) {
+      originalConnect2(token);
+      socket.on('status_like_update', (data) => {
+        // Update data model if exists
+        if (statusData_Friends) {
+          for (let group of statusData_Friends) {
+            for (let s of group.statuses) {
+              if (s.id === data.status_id) {
+                s.likes_count = data.count;
+                if (currentUser.id === data.user_id) s.is_liked = data.liked;
+              }
+            }
+          }
+        }
+        if (statusData_My) {
+          for (let s of statusData_My) {
+            if (s.id === data.status_id) {
+              s.likes_count = data.count;
+              if (currentUser.id === data.user_id) s.is_liked = data.liked;
+            }
+          }
+        }
+
+        // Update UI if viewing
+        if (currentStatusGroup && currentViewerItemIdx >= 0) {
+          const viewingId = currentStatusGroup.statuses[currentViewerItemIdx].id;
+          if (viewingId === data.status_id) {
+            // Check if *I* did it to set is_liked correctly (or rely on data.liked if user_id matches me)
+            const isMe = (data.user_id === currentUser.id);
+            let amILiking = isMe ? data.liked : (currentStatusGroup.statuses[currentViewerItemIdx].is_liked);
+            updateLikeUI(data.count, amILiking);
+          }
+        }
+      });
+    };
+
+    // --- Share Logic ---
+    let shareContext = null; // { type: 'whiteboard'|'notepad', id: int }
+
+    async function openShareModal(type, id) {
+      if (!id) return alert("Nothing to share");
+      shareContext = { type, id };
+      document.getElementById('shareItemModal').classList.remove('hidden');
+
+      const list = document.getElementById('shareFriendList');
+      list.innerHTML = 'Loading friends...';
+
+      try {
+        const friends = await api('/friends');
+        list.innerHTML = '';
+        if (friends.length === 0) {
+          list.innerHTML = '<p style="padding:10px;text-align:center;">No friends available</p>';
+          return;
+        }
+
+        friends.forEach(f => {
+          const div = document.createElement('div');
+          div.className = 'chat-item';
+          div.innerHTML = `
+                <img src="${avatar(f.profile_image, f.username)}" class="dp">
+                <span>${f.username}</span>
+            `;
+          // Add Send Button
+          const btn = document.createElement('button');
+          btn.textContent = 'Send Copy';
+          btn.style.marginLeft = 'auto';
+          btn.style.padding = '5px 10px';
+          btn.style.fontSize = '0.8rem';
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            sendShare(f.id);
+          };
+          div.appendChild(btn);
+          list.appendChild(div);
+        });
+      } catch (e) {
+        list.innerHTML = '<p style="color:red">Error loading friends</p>';
+      }
+    }
+
+    async function sendShare(targetUserId) {
+      if (!shareContext) return;
+      const { type, id } = shareContext;
+      const endpoint = type === 'whiteboard' ? `/api/whiteboards/${id}/share` : `/api/notepads/${id}/share`;
+
+      try {
+        await api(endpoint, {
+          method: 'POST',
+          body: JSON.stringify({ target_user_id: targetUserId })
+        });
+        alert("Sent successfully!");
+        document.getElementById('shareItemModal').classList.add('hidden');
+      } catch (e) {
+        alert("Share failed: " + e.message);
+      }
+    }
+
+    // --- PDF Download Logic ---
+    function downloadNotepadPDF() {
+      const doc = new jspdf.jsPDF();
+      const content = document.getElementById('noteContent').value;
+      const title = document.getElementById('noteTitle').value || "Note";
+
+      // Add Title
+      doc.setFontSize(18);
+      doc.text(title, 10, 10);
+
+      // Add Content (Split text to fit page)
+      doc.setFontSize(12);
+      const lines = doc.splitTextToSize(content, 180);
+      doc.text(lines, 10, 20);
+
+      doc.save(`${title}.pdf`);
     }
   </script>
 </body>

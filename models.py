@@ -141,3 +141,12 @@ class Status(db.Model):
     content = db.Column(db.Text, nullable=True) # URL or Text
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=False) # 24h expiration
+    likes = db.relationship('StatusLike', backref='status', cascade='all, delete-orphan')
+
+class StatusLike(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    status_id = db.Column(db.Integer, db.ForeignKey('status.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('status_id', 'user_id', name='_user_status_like_uc'),)
