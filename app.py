@@ -1509,6 +1509,20 @@ def delete_notepad(id):
 
 # === Status Routes ===
 
+@app.route('/api/status/<int:status_id>', methods=['DELETE'])
+@jwt_required()
+def delete_status(status_id):
+    user_id = int(get_jwt_identity())
+    status = db.session.get(Status, status_id)
+    if not status:
+        return jsonify({'msg': 'Status not found'}), 404
+    if status.user_id != user_id:
+        return jsonify({'msg': 'Permission denied'}), 403
+        
+    db.session.delete(status)
+    db.session.commit()
+    return jsonify({'msg': 'Status deleted'}), 200
+
 @app.route('/api/status/<int:status_id>/like', methods=['POST'])
 @jwt_required()
 def like_status(status_id):

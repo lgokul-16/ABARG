@@ -1459,6 +1459,11 @@
       gap: 5px;
     }
 
+    #shareItemModal {
+      z-index: 6000;
+    }
+
+
     .status-like-btn {
       font-size: 2rem;
       cursor: pointer;
@@ -1730,6 +1735,11 @@
         <div id="statusLikeBtn" class="status-like-btn"
           onclick="toggleStatusLike(currentStatusGroup.statuses[currentViewerItemIdx].id)">🤍</div>
         <div id="statusLikeCount" class="status-like-count"></div>
+      </div>
+
+      <div id="statusDeleteBtnContainer" class="hidden" style="position:absolute; top:20px; right:60px; z-index:5003;">
+        <button onclick="deleteStatus(currentStatusGroup.statuses[currentViewerItemIdx].id)"
+          style="background:rgba(0,0,0,0.5); border:none; color:white; font-size:1.5rem; cursor:pointer; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">🗑️</button>
       </div>
     </div>
 
@@ -2863,6 +2873,18 @@
       }
     }
 
+    async function deleteStatus(statusId) {
+      if (!confirm("Delete this status update?")) return;
+      try {
+        await api(`/api/status/${statusId}`, { method: 'DELETE' });
+        closeStatusViewer();
+        loadStatuses();
+        // alert("Status deleted");
+      } catch (e) {
+        alert("Delete failed: " + e.message);
+      }
+    }
+
     function getVideoDuration(file) {
       return new Promise((resolve, reject) => {
         const video = document.createElement('video');
@@ -2887,7 +2909,23 @@
 
         // Update My Status UI
         const myImg = document.getElementById('myStatusImg');
-        if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image; // Or last status thumb?
+        if (currentUser && currentUser.profile_image) myImg.src = currentUser.profile_image;
+
+        // Add click handler to view My Status
+        const myStatusItem = document.querySelector('.status-item'); // Assuming first one is "My Status"
+        if (myStatusItem) {
+          myStatusItem.onclick = () => {
+            if (statusData_My.length > 0) {
+              // Hack: treat my status as a "group" at index -1 or similar?
+              // Easier: Prepend "Me" to the friend viewing list temporarily?
+              // Or separate viewer logic.
+              // Quickest: Reuse openStatusViewer with a special flag/index
+              openMyStatusViewer();
+            } else {
+              triggerStatusUpload();
+            }
+          };
+        }
 
         // Render Friends List
         const list = document.getElementById('statusList');
@@ -3017,6 +3055,17 @@
 
       // Update Like UI
       updateLikeUI(status.likes_count, status.is_liked);
+
+      // Update Delete UI
+      const delBtn = document.getElementById('statusDeleteBtnContainer');
+      // Logic: if currentStatusGroup is Me, then I can delete.
+      // But status object doesn't have user_id on it easily if group matches.
+      // Better check: does currentStatusGroup.user_id === currentUser.id?
+      if (currentStatusGroup.user_id === currentUser.id) {
+        delBtn.classList.remove('hidden');
+      } else {
+        delBtn.classList.add('hidden');
+      }
 
       // Content
       currentDuration = 5000; // Default
