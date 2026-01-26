@@ -3,7 +3,7 @@ eventlet.monkey_patch()
 
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token
 from flask_socketio import SocketIO, join_room, emit
@@ -1000,7 +1000,6 @@ def handle_message(data):
     msg = Message(sender_id=user_id, content=content, image_url=image_url)
     
     if lifespan:
-        from datetime import timedelta
         msg.expires_at = datetime.utcnow() + timedelta(seconds=int(lifespan))
 
     if conversation_id:
