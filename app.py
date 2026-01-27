@@ -1774,7 +1774,7 @@ def ask_delta():
             }
             
             # Using Mistral-7B-Instruct - high quality and fast
-            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+            api_url = "https://router.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
             
             # Format prompt for Mistral
             formatted_prompt = f"<s>[INST] {prompt} [/INST]"
