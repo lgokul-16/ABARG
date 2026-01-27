@@ -1773,14 +1773,12 @@ def ask_delta():
                 "Content-Type": "application/json"
             }
             
-            # Using Mistral-7B-Instruct - high quality and fast
-            api_url = "https://router.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+            # Using Mistral-7B-Instruct via Inference API
+            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
             
-            # Format prompt for Mistral
-            formatted_prompt = f"<s>[INST] {prompt} [/INST]"
-            
+            # Simple text generation format
             payload = {
-                "inputs": formatted_prompt,
+                "inputs": prompt,
                 "parameters": {
                     "max_new_tokens": 1000,
                     "temperature": 0.7,
@@ -1803,6 +1801,8 @@ def ask_delta():
             # Extract generated text
             if isinstance(data, list) and len(data) > 0:
                 result_text = data[0].get('generated_text', '')
+            elif isinstance(data, dict) and 'generated_text' in data:
+                result_text = data['generated_text']
             else:
                 result_text = str(data)
                 
