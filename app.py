@@ -1757,58 +1757,45 @@ def ask_delta():
         else:
             return jsonify({"msg": "Invalid action"}), 400
 
-        # EXCLUSIVE: Hugging Face Inference API (100% Free)
+        # EXCLUSIVE: OpenRouter (Free AI Models)
         try:
             import requests
-            hf_key = os.environ.get('HUGGINGFACE_API_KEY')
-            if not hf_key:
-                 return jsonify({"msg": "Server configuration error: HUGGINGFACE_API_KEY missing."}), 500
+            openrouter_key = os.environ.get('OPENROUTER_API_KEY')
+            if not openrouter_key:
+                 return jsonify({"msg": "Server configuration error: OPENROUTER_API_KEY missing."}), 500
             
             # Ensure the key is a string and strip any whitespace
-            hf_key = str(hf_key).strip()
+            openrouter_key = str(openrouter_key).strip()
             
             headers = {
-                "Authorization": f"Bearer {hf_key}",
-                "Content-Type": "application/json"
+                "Authorization": f"Bearer {openrouter_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://ultimatum-app.com",
+                "X-Title": "Ultimatum DELTA AI"
             }
-            
-            # Using Mistral-7B-Instruct - high quality and fast
-            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
-            
-            # Format prompt for Mistral
-            formatted_prompt = f"<s>[INST] {prompt} [/INST]"
             
             payload = {
-                "inputs": formatted_prompt,
-                "parameters": {
-                    "max_new_tokens": 1000,
-                    "temperature": 0.7,
-                    "top_p": 0.95,
-                    "return_full_text": False
-                }
+                "model": "meta-llama/llama-3.1-8b-instruct:free",  # Free model
+                "messages": [
+                    {"role": "system", "content": "You are a helpful AI assistant. Provide detailed, high-quality responses."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 2000
             }
             
-            response = requests.post(api_url, json=payload, headers=headers, timeout=30)
+            response = requests.post("https://openrouter.ai/api/v1/chat/completions", json=payload, headers=headers, timeout=30)
             
-            if response.status_code == 503:  # Model loading
-                return jsonify({"msg": "AI is warming up. Please try again in a moment."}), 503
-            elif response.status_code == 429:  # Rate limit
+            if response.status_code == 429:  # Rate limit
                 return jsonify({"msg": "AI is busy right now. Please wait a moment and try again."}), 429
             elif response.status_code != 200:
                 return jsonify({"msg": f"AI API Error ({response.status_code}): {response.text}"}), 500
                 
             data = response.json()
-            
-            # Extract generated text
-            if isinstance(data, list) and len(data) > 0:
-                result_text = data[0].get('generated_text', '')
-            else:
-                result_text = str(data)
-                
-            return jsonify({"result": result_text}), 200
+            return jsonify({"result": data['choices'][0]['message']['content']}), 200
 
         except Exception as e_ai:
-            print(f"Hugging Face Error: {e_ai}")
+            print(f"OpenRouter Error: {e_ai}")
             return jsonify({"msg": f"AI Error: {str(e_ai)}"}), 500
 
     except Exception as e:
