@@ -1773,10 +1773,10 @@ def ask_delta():
             }
             payload = {
                 "messages": [
-                    {"role": "system", "content": "You are a helpful AI assistant. Keep responses concisen and relevant."},
+                    {"role": "system", "content": "You are a helpful AI assistant. Keep responses concise and relevant."},
                     {"role": "user", "content": prompt}
                 ],
-                "model": "llama3-8b-8192"
+                "model": "llama-3.1-8b-instant"
             }
             
             response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=10)
