@@ -10,3 +10,4 @@ cloudinary
 supabase
 google-generativeai
 gunicorn
+psycopg2-binary
