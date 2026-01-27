@@ -1757,22 +1757,32 @@ def ask_delta():
         else:
             return jsonify({"msg": "Invalid action"}), 400
 
-        # EXCLUSIVE: Groq (Llama 3)
+        # EXCLUSIVE: Groq (Llama 3) via Raw HTTP
         try:
-            from groq import Groq
+            import requests
             groq_key = os.environ.get('GROQ_API_KEY')
             if not groq_key:
                  return jsonify({"msg": "Server configuration error: GROQ_API_KEY missing."}), 500
             
-            client = Groq(api_key=groq_key)
-            completion = client.chat.completions.create(
-                messages=[
+            headers = {
+                "Authorization": f"Bearer {groq_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "messages": [
                     {"role": "system", "content": "You are a helpful AI assistant. Keep responses concisen and relevant."},
                     {"role": "user", "content": prompt}
                 ],
-                model="llama3-8b-8192",
-            )
-            return jsonify({"result": completion.choices[0].message.content}), 200
+                "model": "llama3-8b-8192"
+            }
+            
+            response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=10)
+            
+            if response.status_code != 200:
+                return jsonify({"msg": f"Groq API Error ({response.status_code}): {response.text}"}), 500
+                
+            data = response.json()
+            return jsonify({"result": data['choices'][0]['message']['content']}), 200
 
         except Exception as e_groq:
             print(f"Groq Error: {e_groq}")
