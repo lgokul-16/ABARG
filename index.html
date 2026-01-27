@@ -1538,6 +1538,10 @@
         /* Show back button */
       }
 
+      .mobile-hidden {
+        display: none !important;
+      }
+
       /* Adjust Headers */
       .app-header {
         padding: 10px 15px;
@@ -2498,7 +2502,7 @@
     }
 
     function backToSidebar() {
-      document.getElementById('sidebar').classList.remove('hidden');
+      document.getElementById('sidebar').classList.remove('mobile-hidden');
       document.getElementById('chatArea').classList.remove('active');
 
       // Reset any inline styles if they exist
@@ -2531,7 +2535,7 @@
       chatArea.classList.remove('hidden');
 
       // Mobile View Toggle
-      document.getElementById('sidebar').classList.add('hidden');
+      document.getElementById('sidebar').classList.add('mobile-hidden');
       document.getElementById('chatArea').classList.add('active');
 
       try {
@@ -2597,7 +2601,7 @@
       chatArea.classList.remove('hidden');
 
       // Mobile View Toggle
-      document.getElementById('sidebar').classList.add('hidden');
+      document.getElementById('sidebar').classList.add('mobile-hidden');
       document.getElementById('chatArea').classList.add('active');
 
 
