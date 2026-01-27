@@ -1761,7 +1761,7 @@ def ask_delta():
             return jsonify({"msg": "Invalid action"}), 400
 
         # Call Gemini
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash-001')
         response = model.generate_content(prompt)
         
         return jsonify({"result": response.text}), 200
