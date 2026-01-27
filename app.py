@@ -1788,8 +1788,6 @@ def ask_delta():
         return jsonify({"msg": error_msg}), 500
 
     except Exception as e:
-
-    except Exception as e:
         print(f"DELTA AI Error: {e}")
         return jsonify({"msg": str(e)}), 500
 
