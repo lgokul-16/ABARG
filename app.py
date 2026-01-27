@@ -1761,10 +1761,18 @@ def ask_delta():
             return jsonify({"msg": "Invalid action"}), 400
 
         # Call Gemini
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
-        
-        return jsonify({"result": response.text}), 200
+        try:
+            model = genai.GenerativeModel('gemini-pro')
+            response = model.generate_content(prompt)
+            return jsonify({"result": response.text}), 200
+        except Exception as e:
+            # DEBUG: List available models to logs
+            print(f"Error accessing gemini-pro: {e}")
+            print("Listing available models...")
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    print(m.name)
+            raise e
 
     except Exception as e:
         print(f"DELTA AI Error: {e}")
