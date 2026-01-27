@@ -1781,5 +1781,9 @@ def ask_delta():
             print(f"Groq Error: {e_groq}")
             return jsonify({"msg": f"Groq Error: {str(e_groq)}"}), 500
 
+    except Exception as e:
+        print(f"DELTA AI Error: {e}")
+        return jsonify({"msg": str(e)}), 500
+
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
