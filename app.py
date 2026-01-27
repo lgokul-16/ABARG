@@ -1760,19 +1760,34 @@ def ask_delta():
         else:
             return jsonify({"msg": "Invalid action"}), 400
 
-        # Call Gemini
+        # Call Gemini with Fallbacks
+        model_names = ['gemini-1.5-flash', 'gemini-1.5-flash-001', 'gemini-pro', 'gemini-1.0-pro-latest']
+        last_error = None
+        
+        for m_name in model_names:
+            try:
+                # print(f"Trying model: {m_name}")
+                model = genai.GenerativeModel(m_name)
+                response = model.generate_content(prompt)
+                return jsonify({"result": response.text}), 200
+            except Exception as e:
+                last_error = e
+                # Continue to next model
+        
+        # If all failed, gather debug info
+        available_models = []
         try:
-            model = genai.GenerativeModel('gemini-pro')
-            response = model.generate_content(prompt)
-            return jsonify({"result": response.text}), 200
-        except Exception as e:
-            # DEBUG: List available models to logs
-            print(f"Error accessing gemini-pro: {e}")
-            print("Listing available models...")
             for m in genai.list_models():
                 if 'generateContent' in m.supported_generation_methods:
-                    print(m.name)
-            raise e
+                    available_models.append(m.name)
+        except Exception as e2:
+            available_models = [f"Could not list models: {str(e2)}"]
+
+        error_msg = f"All models failed. Last error: {str(last_error)}. AVAILABLE MODELS: {', '.join(available_models)}"
+        print(error_msg)
+        return jsonify({"msg": error_msg}), 500
+
+    except Exception as e:
 
     except Exception as e:
         print(f"DELTA AI Error: {e}")
