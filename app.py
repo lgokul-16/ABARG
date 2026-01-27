@@ -70,6 +70,10 @@ def send_otp_email(email, otp):
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+import google.generativeai as genai
+
+# Configure Gemini
+genai.configure(api_key=Config.GEMINI_API_KEY if hasattr(Config, 'GEMINI_API_KEY') else os.getenv('GEMINI_API_KEY'))
 
 # Cloudinary Config
 cloudinary.config(
@@ -1723,6 +1727,48 @@ def share_notepad(note_id):
     db.session.add(new_note)
     db.session.commit()
     return jsonify({'msg': 'Shared successfully'}), 200
+
+# === DELTA AI Route ===
+@app.route('/api/delta/ask', methods=['POST'])
+@jwt_required()
+def ask_delta():
+    try:
+        data = request.get_json()
+        note_content = data.get('content', '')
+        action = data.get('action', 'summarize') # summarize, action_items, polish, expand, qa, explain_code
+        user_query = data.get('query', '') # For Q&A
+
+        if not note_content:
+            return jsonify({"msg": "Note content is empty"}), 400
+
+        # Construct Prompt
+        prompt = ""
+        if action == 'summarize':
+            prompt = f"Summarize the following note concisely:\\n\\n{note_content}"
+        elif action == 'action_items':
+            prompt = f"Extract a checklist of action items/tasks from this note. Return them as a markdown list:\\n\\n{note_content}"
+        elif action == 'polish':
+            prompt = f"Rewrite the following text to be more professional, fix grammar, and improve clarity:\\n\\n{note_content}"
+        elif action == 'expand':
+            prompt = f"Expand on the following points, adding relevant details and creative ideas:\\n\\n{note_content}"
+        elif action == 'qa':
+            if not user_query:
+                return jsonify({"msg": "Query required for Q&A"}), 400
+            prompt = f"Based ONLY on the following note, answer the question: '{user_query}'\\n\\nNote Content:\\n{note_content}"
+        elif action == 'explain_code':
+            prompt = f"Explain the following code snippet simply:\\n\\n{note_content}"
+        else:
+            return jsonify({"msg": "Invalid action"}), 400
+
+        # Call Gemini
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        
+        return jsonify({"result": response.text}), 200
+
+    except Exception as e:
+        print(f"DELTA AI Error: {e}")
+        return jsonify({"msg": str(e)}), 500
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

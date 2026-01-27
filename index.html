@@ -1754,6 +1754,9 @@
               placeholder="Note Title">
             <div style="display:flex; gap:10px; align-items:center;">
               <span id="noteSaveStatus" style="font-size:0.8rem; color:var(--text-muted);">Saved</span>
+              <button onclick="openDeltaModal()"
+                style="background:linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color:black; padding:8px 20px; border-radius:20px; font-weight:bold; box-shadow:0 0 10px rgba(255, 215, 0, 0.3);">✨
+                DELTA</button>
               <button onclick="saveNotepad()"
                 style="background:var(--primary-gradient); color:white; padding:8px 20px; border-radius:20px;">Save</button>
               <button onclick="downloadNotepadPDF()"
@@ -1896,6 +1899,39 @@
         <div style="margin-top:20px;">
           <button onclick="document.getElementById('shareItemModal').classList.add('hidden')" class="secondary-btn"
             style="width:100%;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELTA AI Modal -->
+    <div id="deltaModal" class="hidden modal" style="z-index: 5000;">
+      <div class="modal-content">
+        <h3>✨ DELTA AI</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px;">Powered by Gemini Flash</p>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+          <button onclick="triggerDelta('summarize')" class="secondary-btn">📝 Summarize</button>
+          <button onclick="triggerDelta('action_items')" class="secondary-btn">✅ Action Items</button>
+          <button onclick="triggerDelta('polish')" class="secondary-btn">🎩 Polish / Professional</button>
+          <button onclick="triggerDelta('expand')" class="secondary-btn">🧠 Brainstorm / Expand</button>
+          <button onclick="triggerDelta('explain_code')" class="secondary-btn">💻 Explain Code</button>
+        </div>
+
+        <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-size:0.9rem;">Ask a Question about this note:</label>
+          <div style="display:flex; gap:5px;">
+            <input type="text" id="deltaQuery" placeholder="e.g. What is the deadline?" style="flex:1;">
+            <button onclick="triggerDelta('qa')">Ask</button>
+          </div>
+        </div>
+
+        <div id="deltaResultArea" class="hidden"
+          style="background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; margin-bottom:15px; max-height:200px; overflow-y:auto; font-size:0.9rem; white-space:pre-wrap;">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+          <button onclick="document.getElementById('deltaModal').classList.add('hidden')"
+            class="secondary-btn">Close</button>
         </div>
       </div>
     </div>
@@ -5443,6 +5479,55 @@
       doc.text(lines, 10, 20);
 
       doc.save(`${title}.pdf`);
+    }
+    // --- DELTA AI Logic ---
+    function openDeltaModal() {
+      document.getElementById('deltaModal').classList.remove('hidden');
+      document.getElementById('deltaResultArea').classList.add('hidden');
+      document.getElementById('deltaResultArea').textContent = '';
+      document.getElementById('deltaQuery').value = '';
+    }
+
+    async function triggerDelta(action) {
+      const content = document.getElementById('noteContent').value;
+      if (!content.trim()) return alert("Note is empty!");
+
+      const resultArea = document.getElementById('deltaResultArea');
+      resultArea.classList.remove('hidden');
+      resultArea.innerHTML = 'Thinking... <span style="animation:pulse 1s infinite">✨</span>';
+
+      let query = '';
+      if (action === 'qa') {
+        query = document.getElementById('deltaQuery').value;
+        if (!query.trim()) return alert("Please enter a question.");
+      }
+
+      try {
+        const res = await api('/api/delta/ask', {
+          method: 'POST',
+          body: JSON.stringify({ content, action, query })
+        });
+
+        // Show result
+        resultArea.innerHTML = '';
+        // Simple Markdown parsing for bold/lists if needed, or just text
+        // Reusing a known trick or just exact text
+        resultArea.textContent = res.result;
+
+        // Add "Append" button if successful
+        const btnId = 'deltaAppendBtn_' + Date.now();
+        resultArea.innerHTML += `<br><button id="${btnId}" style="margin-top:10px; font-size:0.8rem; padding:4px 8px;">Append to Note</button>`;
+        setTimeout(() => {
+          document.getElementById(btnId).onclick = () => {
+            document.getElementById('noteContent').value += "\\n\\n--- DELTA AI ---\\n" + res.result;
+            document.getElementById('deltaModal').classList.add('hidden');
+            saveNotepad();
+          };
+        }, 0);
+
+      } catch (e) {
+        resultArea.innerHTML = `<span style="color:#ef4444">Error: ${e.message}</span>`;
+      }
     }
   </script>
 </body>
