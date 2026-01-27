@@ -1760,70 +1760,26 @@ def ask_delta():
         else:
             return jsonify({"msg": "Invalid action"}), 400
 
-        # 1. Dynamic Gemini Selection
-        last_error = None
-        chosen_model_name = None
-        available_list = []
-
-        try:
-            # Fetch valid models from server
-            for m in genai.list_models():
-                if 'generateContent' in m.supported_generation_methods:
-                    available_list.append(m.name)
-            
-            # Select best match
-            preferences = ['1.5-flash', '2.0-flash', '1.5-pro', '1.0-pro', 'gemini-pro', 'flash']
-            
-            for pref in preferences:
-                for m_name in available_list:
-                    if pref in m_name:
-                        chosen_model_name = m_name
-                        break
-                if chosen_model_name:
-                    break
-            
-            # Fallback to first available if no preference matched
-            if not chosen_model_name and available_list:
-                chosen_model_name = available_list[0]
-
-            if chosen_model_name:
-                print(f"Selected Gemini Model: {chosen_model_name}")
-                model = genai.GenerativeModel(chosen_model_name)
-                response = model.generate_content(prompt)
-                return jsonify({"result": response.text}), 200
-            else:
-                last_error = "No suitable Gemini models found in list."
-
-        except Exception as e:
-            last_error = e
-
-        # 2. Try Groq Fallback (Llama 3)
+        # EXCLUSIVE: Groq (Llama 3)
         try:
             from groq import Groq
             groq_key = os.environ.get('GROQ_API_KEY')
-            if groq_key:
-                client = Groq(api_key=groq_key)
-                completion = client.chat.completions.create(
-                    messages=[
-                        {"role": "system", "content": "You are a helpful AI assistant."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    model="llama3-8b-8192",
-                )
-                return jsonify({"result": completion.choices[0].message.content}), 200
-            else:
-                print("Groq Skipped: No API Key")
+            if not groq_key:
+                 return jsonify({"msg": "Server configuration error: GROQ_API_KEY missing."}), 500
+            
+            client = Groq(api_key=groq_key)
+            completion = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "You are a helpful AI assistant. Keep responses concisen and relevant."},
+                    {"role": "user", "content": prompt}
+                ],
+                model="llama3-8b-8192",
+            )
+            return jsonify({"result": completion.choices[0].message.content}), 200
+
         except Exception as e_groq:
-            print(f"Groq Fallback Failed: {e_groq}")
-            last_error = f"{last_error} | Groq Error: {e_groq}"
-
-        error_msg = f"AI Generation Failed. Last Error: {str(last_error)}. AVAILABLE: {', '.join(available_list)}"
-        print(error_msg)
-        return jsonify({"msg": error_msg}), 500
-
-    except Exception as e:
-        print(f"DELTA AI Error: {e}")
-        return jsonify({"msg": str(e)}), 500
+            print(f"Groq Error: {e_groq}")
+            return jsonify({"msg": f"Groq Error: {str(e_groq)}"}), 500
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
