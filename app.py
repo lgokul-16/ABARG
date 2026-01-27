@@ -1760,30 +1760,64 @@ def ask_delta():
         else:
             return jsonify({"msg": "Invalid action"}), 400
 
-        # Call Gemini with Fallbacks
-        model_names = ['gemini-1.5-flash', 'gemini-1.5-flash-001', 'gemini-pro', 'gemini-1.0-pro-latest']
+        # 1. Dynamic Gemini Selection
         last_error = None
-        
-        for m_name in model_names:
-            try:
-                # print(f"Trying model: {m_name}")
-                model = genai.GenerativeModel(m_name)
-                response = model.generate_content(prompt)
-                return jsonify({"result": response.text}), 200
-            except Exception as e:
-                last_error = e
-                # Continue to next model
-        
-        # If all failed, gather debug info
-        available_models = []
+        chosen_model_name = None
+        available_list = []
+
         try:
+            # Fetch valid models from server
             for m in genai.list_models():
                 if 'generateContent' in m.supported_generation_methods:
-                    available_models.append(m.name)
-        except Exception as e2:
-            available_models = [f"Could not list models: {str(e2)}"]
+                    available_list.append(m.name)
+            
+            # Select best match
+            preferences = ['1.5-flash', '2.0-flash', '1.5-pro', '1.0-pro', 'gemini-pro', 'flash']
+            
+            for pref in preferences:
+                for m_name in available_list:
+                    if pref in m_name:
+                        chosen_model_name = m_name
+                        break
+                if chosen_model_name:
+                    break
+            
+            # Fallback to first available if no preference matched
+            if not chosen_model_name and available_list:
+                chosen_model_name = available_list[0]
 
-        error_msg = f"All models failed. Last error: {str(last_error)}. AVAILABLE MODELS: {', '.join(available_models)}"
+            if chosen_model_name:
+                print(f"Selected Gemini Model: {chosen_model_name}")
+                model = genai.GenerativeModel(chosen_model_name)
+                response = model.generate_content(prompt)
+                return jsonify({"result": response.text}), 200
+            else:
+                last_error = "No suitable Gemini models found in list."
+
+        except Exception as e:
+            last_error = e
+
+        # 2. Try Groq Fallback (Llama 3)
+        try:
+            from groq import Groq
+            groq_key = os.environ.get('GROQ_API_KEY')
+            if groq_key:
+                client = Groq(api_key=groq_key)
+                completion = client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": "You are a helpful AI assistant."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    model="llama3-8b-8192",
+                )
+                return jsonify({"result": completion.choices[0].message.content}), 200
+            else:
+                print("Groq Skipped: No API Key")
+        except Exception as e_groq:
+            print(f"Groq Fallback Failed: {e_groq}")
+            last_error = f"{last_error} | Groq Error: {e_groq}"
+
+        error_msg = f"AI Generation Failed. Last Error: {str(last_error)}. AVAILABLE: {', '.join(available_list)}"
         print(error_msg)
         return jsonify({"msg": error_msg}), 500
 
