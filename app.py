@@ -73,7 +73,7 @@ import cloudinary.api
 import google.generativeai as genai
 
 # Configure Gemini
-genai.configure(api_key=Config.GEMINI_API_KEY if hasattr(Config, 'GEMINI_API_KEY') else os.getenv('GEMINI_API_KEY'))
+genai.configure(api_key=Config.GEMINI_API_KEY)
 
 # Cloudinary Config
 cloudinary.config(
