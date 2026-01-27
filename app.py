@@ -1773,8 +1773,8 @@ def ask_delta():
                 "Content-Type": "application/json"
             }
             
-            # Using Mistral-7B-Instruct via Inference API
-            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+            # Using Mistral-7B-Instruct via Router API
+            api_url = "https://router.huggingface.co/mistralai/Mistral-7B-Instruct-v0.2"
             
             # Simple text generation format
             payload = {
