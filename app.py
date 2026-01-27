@@ -1775,7 +1775,7 @@ def ask_delta():
             }
             
             payload = {
-                "model": "google/gemini-flash-1.5",  # Free model
+                "model": "google/gemini-2.0-flash-exp:free",  # Confirmed Free model
                 "messages": [
                     {"role": "user", "content": prompt}
                 ]
