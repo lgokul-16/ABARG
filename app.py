@@ -1757,43 +1757,42 @@ def ask_delta():
         else:
             return jsonify({"msg": "Invalid action"}), 400
 
-        # EXCLUSIVE: Groq (Llama 3) via Raw HTTP
+        # EXCLUSIVE: DeepSeek AI (High Quality Free Tier)
         try:
             import requests
-            groq_key = os.environ.get('GROQ_API_KEY', '')
-            if not groq_key:
-                 return jsonify({"msg": "Server configuration error: GROQ_API_KEY missing."}), 500
+            deepseek_key = os.environ.get('DEEPSEEK_API_KEY')
+            if not deepseek_key:
+                 return jsonify({"msg": "Server configuration error: DEEPSEEK_API_KEY missing."}), 500
             
             # Ensure the key is a string and strip any whitespace
-            groq_key = str(groq_key).strip()
+            deepseek_key = str(deepseek_key).strip()
             
             headers = {
-                "Authorization": f"Bearer {groq_key}",
+                "Authorization": f"Bearer {deepseek_key}",
                 "Content-Type": "application/json"
             }
             payload = {
                 "messages": [
-                    {"role": "system", "content": "You are a helpful AI assistant. Keep responses concise and relevant."},
+                    {"role": "system", "content": "You are a helpful AI assistant. Provide detailed, high-quality responses."},
                     {"role": "user", "content": prompt}
                 ],
-                "model": "llama-3.1-8b-instant",
-                "max_tokens": 500,  # Limit response length to stay within free tier
+                "model": "deepseek-chat",
                 "temperature": 0.7
             }
             
-            response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=15)
+            response = requests.post("https://api.deepseek.com/v1/chat/completions", json=payload, headers=headers, timeout=30)
             
             if response.status_code == 429:  # Rate limit
                 return jsonify({"msg": "AI is busy right now. Please wait a moment and try again."}), 429
             elif response.status_code != 200:
-                return jsonify({"msg": f"Groq API Error ({response.status_code}): {response.text}"}), 500
+                return jsonify({"msg": f"DeepSeek API Error ({response.status_code}): {response.text}"}), 500
                 
             data = response.json()
             return jsonify({"result": data['choices'][0]['message']['content']}), 200
 
-        except Exception as e_groq:
-            print(f"Groq Error: {e_groq}")
-            return jsonify({"msg": f"Groq Error: {str(e_groq)}"}), 500
+        except Exception as e_ai:
+            print(f"DeepSeek Error: {e_ai}")
+            return jsonify({"msg": f"AI Error: {str(e_ai)}"}), 500
 
     except Exception as e:
         print(f"DELTA AI Error: {e}")
