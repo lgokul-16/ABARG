@@ -1757,6 +1757,7 @@ def ask_delta():
         else:
             return jsonify({"msg": "Invalid action"}), 400
 
+        # === AI Integration: Hugging Face Mistral-7B ===
         # EXCLUSIVE: Hugging Face Inference API (100% Free)
         try:
             import requests
