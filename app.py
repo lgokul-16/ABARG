@@ -1760,9 +1760,12 @@ def ask_delta():
         # EXCLUSIVE: Groq (Llama 3) via Raw HTTP
         try:
             import requests
-            groq_key = os.environ.get('GROQ_API_KEY')
+            groq_key = os.environ.get('GROQ_API_KEY', '')
             if not groq_key:
                  return jsonify({"msg": "Server configuration error: GROQ_API_KEY missing."}), 500
+            
+            # Ensure the key is a string and strip any whitespace
+            groq_key = str(groq_key).strip()
             
             headers = {
                 "Authorization": f"Bearer {groq_key}",
