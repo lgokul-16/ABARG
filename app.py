@@ -70,10 +70,7 @@ def send_otp_email(email, otp):
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
-import google.generativeai as genai
 
-# Configure Gemini
-genai.configure(api_key=Config.GEMINI_API_KEY)
 
 # Cloudinary Config
 cloudinary.config(
