@@ -1776,12 +1776,16 @@ def ask_delta():
                     {"role": "system", "content": "You are a helpful AI assistant. Keep responses concise and relevant."},
                     {"role": "user", "content": prompt}
                 ],
-                "model": "llama-3.1-8b-instant"
+                "model": "llama-3.1-8b-instant",
+                "max_tokens": 500,  # Limit response length to stay within free tier
+                "temperature": 0.7
             }
             
-            response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=10)
+            response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=15)
             
-            if response.status_code != 200:
+            if response.status_code == 429:  # Rate limit
+                return jsonify({"msg": "AI is busy right now. Please wait a moment and try again."}), 429
+            elif response.status_code != 200:
                 return jsonify({"msg": f"Groq API Error ({response.status_code}): {response.text}"}), 500
                 
             data = response.json()
