@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 from flask_cors import CORS
 from supabase import create_client
 from werkzeug.middleware.proxy_fix import ProxyFix
+from deep_translator import GoogleTranslator
 
 # Import Config
 from config import Config
@@ -1442,6 +1443,73 @@ def delete_whiteboard(board_id):
     db.session.delete(board)
     db.session.commit()
     return jsonify({"msg": "Deleted"}), 200
+
+
+# === Translation Events ===
+
+@socketio.on('translate_batch')
+def handle_translate_batch(data):
+    try:
+        messages = data.get('messages', [])
+        target_lang = data.get('target_lang')
+        
+        if not messages or not target_lang:
+            return
+        
+        # Limit batch size to avoid timeout
+        # For now, simplistic approach
+        translator = GoogleTranslator(source='auto', target=target_lang)
+        
+        results = {}
+        batch_text = [msg['content'] for msg in messages if msg.get('content')]
+        
+        # Deep Translator allows batch? 
+        # Actually GoogleTranslator().translate_batch(batch_text) exists and is preferred
+        
+        if not batch_text:
+             emit('translation_result', {'results': {}})
+             return
+
+        translated_batch = translator.translate_batch(batch_text)
+        
+        # Map back to IDs
+        # We need to be careful if some messages didn't have content (e.g. image only)
+        # The list 'batch_text' corresponds to messages that had content.
+        
+        idx = 0
+        for msg in messages:
+            if msg.get('content'):
+                results[msg['id']] = translated_batch[idx]
+                idx += 1
+            else:
+                pass # No content to translate
+                
+        emit('translation_batch_result', {'results': results})
+        
+    except Exception as e:
+        print(f"Translation Batch Error: {e}")
+        emit('error', {'msg': 'Translation failed'})
+
+@socketio.on('translate_message')
+def handle_translate_message(data):
+    try:
+        content = data.get('content')
+        target_lang = data.get('target_lang')
+        msg_id = data.get('id')
+        
+        if not content or not target_lang:
+            return
+            
+        translator = GoogleTranslator(source='auto', target=target_lang)
+        translation = translator.translate(content)
+        
+        emit('translation_single_result', {
+            'id': msg_id,
+            'translation': translation
+        })
+        
+    except Exception as e:
+        print(f"Translation Error: {e}")
 
 
 # === Run ===
