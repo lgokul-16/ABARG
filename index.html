@@ -1701,7 +1701,8 @@
                 title="Translate Chat">🌐 Translate</button>
             </div>
             <div class="chat-actions">
-              <button id="oracleBtn" class="hidden" onclick="openOracleModal()" title="The Oracle"
+              <button id="oracleBtn" class="hidden"
+                onclick="document.getElementById('oracleModal').classList.remove('hidden')" title="The Oracle"
                 style="color:gold;">⚖️</button>
               <button id="callBtn" class="hidden" onclick="startCall()" title="Call">📞</button>
               <button id="whiteboardBtn" class="hidden" onclick="openChatWhiteboard()" title="Collaborate">🎨</button>
