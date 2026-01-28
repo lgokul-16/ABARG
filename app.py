@@ -1498,7 +1498,7 @@ def handle_translate_batch(data):
         
     except Exception as e:
         print(f"Translation Batch Error: {e}")
-        emit('error', {'msg': 'Translation failed'})
+        emit('error', {'msg': f'Translation failed: {str(e)}'})
 
 @socketio.on('translate_message')
 def handle_translate_message(data):
