@@ -97,6 +97,7 @@ class Message(db.Model):
     image_url = db.Column(db.String(255), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=True)
+    type = db.Column(db.String(20), default='text') # 'text', 'image', 'oracle'
     reactions = db.relationship('Reaction', backref='message', cascade='all, delete-orphan')
     seen_entries = db.relationship('MessageSeen', backref='message', cascade='all, delete-orphan')
 

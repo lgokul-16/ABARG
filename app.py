@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from flask_cors import CORS
 from supabase import create_client
 from werkzeug.middleware.proxy_fix import ProxyFix
-from deep_translator import GoogleTranslator
+import json
 
 # Import Config
 from config import Config
@@ -1444,8 +1444,7 @@ def delete_whiteboard(board_id):
     db.session.commit()
     return jsonify({"msg": "Deleted"}), 200
 
-
-# === Translation Events ===
+# === Translation Events (Groq Upgrade) ===
 
 @socketio.on('translate_batch')
 def handle_translate_batch(data):
@@ -1456,35 +1455,30 @@ def handle_translate_batch(data):
         if not messages or not target_lang:
             return
         
-        # Limit batch size to avoid timeout
-        # For now, simplistic approach
-        translator = GoogleTranslator(source='auto', target=target_lang)
-        
-        results = {}
-        batch_text = [msg['content'] for msg in messages if msg.get('content')]
-        
-        # Deep Translator allows batch? 
-        # Actually GoogleTranslator().translate_batch(batch_text) exists and is preferred
-        
-        if not batch_text:
-             emit('translation_result', {'results': {}})
-             return
+        # Filter for text content
+        inputs = {str(msg['id']): msg['content'] for msg in messages if msg.get('content')}
+        if not inputs:
+            emit('translation_result', {'results': {}})
+            return
 
-        translated_batch = translator.translate_batch(batch_text)
+        # Prompt for Groq
+        prompt = f"""
+        Translate the following JSON map of message IDs to text into {target_lang}.
+        Maintain the original tone. Handle slang appropriately.
+        Return ONLY valid JSON with keys as strings and values as translated text.
+        Input: {json.dumps(inputs)}
+        """
         
-        # Map back to IDs
-        # We need to be careful if some messages didn't have content (e.g. image only)
-        # The list 'batch_text' corresponds to messages that had content.
+        # Call Groq
+        # We need to make sure we get just JSON
+        response = call_groq_api(prompt + "\nJSON:")
         
-        idx = 0
-        for msg in messages:
-            if msg.get('content'):
-                results[msg['id']] = translated_batch[idx]
-                idx += 1
-            else:
-                pass # No content to translate
-                
-        emit('translation_batch_result', {'results': results})
+        # Clean response (sometimes AI adds markdown)
+        json_str = response.replace('```json', '').replace('```', '').strip()
+        
+        translated_map = json.loads(json_str)
+        
+        emit('translation_batch_result', {'results': translated_map})
         
     except Exception as e:
         print(f"Translation Batch Error: {e}")
@@ -1500,8 +1494,8 @@ def handle_translate_message(data):
         if not content or not target_lang:
             return
             
-        translator = GoogleTranslator(source='auto', target=target_lang)
-        translation = translator.translate(content)
+        prompt = f"Translate the following text to {target_lang}. Output ONLY the translated text, no preamble or quotes:\n\n{content}"
+        translation = call_groq_api(prompt).strip()
         
         emit('translation_single_result', {
             'id': msg_id,
@@ -1510,6 +1504,102 @@ def handle_translate_message(data):
         
     except Exception as e:
         print(f"Translation Error: {e}")
+
+
+# === The Oracle ===
+@socketio.on('summon_oracle')
+def handle_oracle(data):
+    try:
+        group_id = data.get('group_id')
+        mode = data.get('mode', 'judge') # judge, decider
+        
+        if not group_id: return
+        
+        # Fetch History (Last 30 messages)
+        # We need usernames
+        msgs = Message.query.filter_by(group_id=group_id).order_by(Message.timestamp.desc()).limit(30).all()
+        
+        transcript = []
+        for m in reversed(msgs):
+             if m.type == 'oracle': continue # Skip previous oracle msgs
+             u = db.session.get(User, m.sender_id)
+             name = u.username if u else "Unknown"
+             transcript.append(f"{name}: {m.content}")
+             
+        transcript_text = "\n".join(transcript)
+        
+        if mode == 'judge':
+            prompt = f"""
+            You are The Oracle, a wise, divine, and impartial judge.
+            Analyze the following conversation where a dispute or debate is happening.
+            Determine who is factually or morally correct, or provide a wise compromise.
+            Be decisive, authoritative, and slightly mystical in tone.
+            Output your verdict clearly.
+            
+            Conversation:
+            {transcript_text}
+            
+            Verdict:
+            """
+        elif mode == 'decider':
+             prompt = f"""
+             You are The Oracle. Use your divine wisdom to make a choice.
+             Based on the options discussed in the conversation, pick ONE winner.
+             Give a brief, fun reason.
+             
+             Conversation:
+             {transcript_text}
+             
+             Choice:
+             """
+        else:
+            return
+
+        verdict = call_groq_api(prompt)
+        
+        # Save as Message
+        # We need a sender. Let's use System or create a virtual entry?
+        # For now, we use a special sender ID or just 1 (if Admin) or 0? 
+        # Actually sender_id is foreign key. We must use an existing user.
+        # Ideally we create an 'Oracle' user.
+        # Optimization: Use the user who summoned it as sender, but mark type='oracle'?
+        # No, that's confusing.
+        # Let's use the first user in DB as system or just the summoner?
+        # Let's use the current user as the "Channel" for the oracle but type='oracle' distinguishes UI.
+        user_id = int(get_jwt_identity()) # The summoner
+        
+        oracle_msg = Message(
+            group_id=group_id,
+            sender_id=user_id, # Summoner acts as medium
+            content=verdict,
+            type='oracle'
+        )
+        db.session.add(oracle_msg)
+        db.session.commit()
+        
+        # Broadcast
+        # Emit new_message event manually or rely on general loop?
+        # We usually rely on client pulling or us emitting.
+        # Our app struct uses 'new_group_message' event usually?
+        # Let's emit it.
+        
+        sender = db.session.get(User, user_id)
+        
+        payload = {
+            'id': oracle_msg.id,
+            'group_id': group_id,
+            'sender_id': user_id,
+            'sender_name': "The Oracle", # Override name for display
+            'sender_dp': "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", # Oracle Icon
+            'content': verdict,
+            'timestamp': oracle_msg.timestamp.isoformat(),
+            'type': 'oracle'
+        }
+        
+        emit('new_group_message', payload, to=f"group_{group_id}")
+        
+    except Exception as e:
+        print(f"Oracle Error: {e}")
 
 
 # === Run ===

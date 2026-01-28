@@ -1697,9 +1697,12 @@
                 title="Ask AI">🔍 AI Search</button>
               <button id="translateBtn" onclick="openTranslateModal()"
                 style="padding:5px 10px; font-size:0.8em; background:var(--glass-bg); color:var(--text-main); border:1px solid var(--border-elegant); border-radius:15px;"
+                style="padding:5px 10px; font-size:0.8em; background:var(--glass-bg); color:var(--text-main); border:1px solid var(--border-elegant); border-radius:15px;"
                 title="Translate Chat">🌐 Translate</button>
             </div>
             <div class="chat-actions">
+              <button id="oracleBtn" class="hidden" onclick="openOracleModal()" title="The Oracle"
+                style="color:gold;">⚖️</button>
               <button id="callBtn" class="hidden" onclick="startCall()" title="Call">📞</button>
               <button id="whiteboardBtn" class="hidden" onclick="openChatWhiteboard()" title="Collaborate">🎨</button>
               <button id="deleteChatBtn" class="hidden" onclick="deleteCurrentChat()" title="Delete Chat">🗑</button>
@@ -1804,49 +1807,72 @@
       </div>
     </div>
 
-    <!-- Translate Modal -->
-    <div id="translateModal" class="hidden"
-      style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
-      <div
-        style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px);">
-        <h3 style="margin-bottom:15px;">Select Language</h3>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-          <button onclick="setTranslationLang(null)"
-            style="grid-column:span 2; padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Original</button>
-          <button onclick="setTranslationLang('es')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Spanish
-            🇪🇸</button>
-          <button onclick="setTranslationLang('fr')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">French 🇫🇷</button>
-          <button onclick="setTranslationLang('de')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">German 🇩🇪</button>
-          <button onclick="setTranslationLang('hi')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Hindi 🇮🇳</button>
-          <button onclick="setTranslationLang('zh-CN')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Chinese
-            🇨🇳</button>
-          <button onclick="setTranslationLang('ja')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Japanese
-            🇯🇵</button>
-          <button onclick="setTranslationLang('ru')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Russian
-            🇷🇺</button>
-          <button onclick="setTranslationLang('ar')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Arabic 🇸🇦</button>
-          <button onclick="setTranslationLang('ta')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Tamil 🇮🇳</button>
-          <button onclick="setTranslationLang('it')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Italian
-            🇮🇹</button>
-        </div>
-        <button onclick="closeTranslateModal()"
-          style="margin-top:15px; width:100%; padding:10px; background:transparent; border:1px solid #666; color:#ccc; border-radius:8px;">Cancel</button>
+  </div>
+  </div>
+
+  <!-- Oracle Modal -->
+  <div id="oracleModal" class="hidden"
+    style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
+    <div
+      style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px); text-align:center;">
+      <h3 style="margin-bottom:5px; color:gold;">The Oracle ⚖️</h3>
+      <p style="margin-bottom:15px; font-size:0.9rem; color:#ddd;">Summon the divine judge.</p>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button onclick="summonOracle('judge')"
+          style="padding:12px; border-radius:12px; background:rgba(255,215,0,0.2); color:gold; border:1px solid gold; font-weight:bold;">⚖️
+          The Judge (Settle Dispute)</button>
+        <button onclick="summonOracle('decider')"
+          style="padding:12px; border-radius:12px; background:rgba(192,192,192,0.2); color:#ddd; border:1px solid #aaa; font-weight:bold;">🎲
+          The Decider (Pick Option)</button>
       </div>
+      <button onclick="document.getElementById('oracleModal').classList.add('hidden')"
+        style="margin-top:15px; width:100%; padding:8px; background:transparent; border:none; color:#888;">Dismiss</button>
     </div>
-    <div>
-      <div id="statusViewName" style="color:white; font-weight:600;">User</div>
-      <div id="statusViewTime" style="color:rgba(255,255,255,0.7); font-size:0.8rem;">Just now</div>
+  </div>
+
+  <!-- Translate Modal -->
+  <div id="translateModal" class="hidden"
+    style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
+    <div
+      style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px);">
+      <h3 style="margin-bottom:15px;">Select Language</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <button onclick="setTranslationLang(null)"
+          style="grid-column:span 2; padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Original</button>
+        <button onclick="setTranslationLang('es')"
+          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Spanish
+          🇪🇸</button>
+        <button onclick="setTranslationLang('fr')"
+          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">French 🇫🇷</button>
+        <button onclick="setTranslationLang('de')"
+          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">German 🇩🇪</button>
+        <button onclick="setTranslationLang('hi')"
+          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Hindi 🇮🇳</button>
+        <button onclick="setTranslationLang('zh-CN')"
+          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Chinese
+          🇨🇳</button>
+        <button onclick="setTranslationLang('ja')"
+          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Japanese
+          🇯🇵</button>
+        <button onclick="setTranslationLang('ru')"
+          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Russian
+          🇷🇺</button>
+        <button onclick="setTranslationLang('ar')"
+          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Arabic 🇸🇦</button>
+        <button onclick="setTranslationLang('ta')"
+          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Tamil 🇮🇳</button>
+        <button onclick="setTranslationLang('it')"
+          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Italian
+          🇮🇹</button>
+      </div>
+      <button onclick="closeTranslateModal()"
+        style="margin-top:15px; width:100%; padding:10px; background:transparent; border:1px solid #666; color:#ccc; border-radius:8px;">Cancel</button>
     </div>
+  </div>
+  <div>
+    <div id="statusViewName" style="color:white; font-weight:600;">User</div>
+    <div id="statusViewTime" style="color:rgba(255,255,255,0.7); font-size:0.8rem;">Just now</div>
+  </div>
   </div>
   <button onclick="closeStatusViewer()"
     style="position:absolute; top:20px; right:20px; z-index:5002; background:none; border:none; color:white; font-size:2rem;">✕</button>
@@ -2710,6 +2736,7 @@
     async function openPrivateChat(friendId, friendName, friendDp) {
       document.getElementById('deleteChatBtn').classList.remove('hidden');
       document.getElementById('callBtn').classList.remove('hidden');
+      document.getElementById('oracleBtn').classList.add('hidden'); // Hide Oracle in Private
       // Whiteboard Disabled per user request
       // const wbBtn = document.getElementById('whiteboardBtn');
       // wbBtn.classList.remove('hidden');
@@ -2815,6 +2842,7 @@
 
       document.getElementById('deleteChatBtn').classList.add('hidden');
       document.getElementById('callBtn').classList.add('hidden'); // Hide Call Button in Group
+      document.getElementById('oracleBtn').classList.remove('hidden'); // Show Oracle in Group
 
       // Whiteboard Disabled per user request
       // const wbBtn = document.getElementById('whiteboardBtn');
@@ -3672,7 +3700,23 @@
       const dpUrl = msg.sender_dp;
       let contentHtml = '';
 
-      if (currentChatType === 'group' && !isMe) {
+      if (msg.type === 'oracle') {
+        // ORACLE MESSAGE SPECIAL STYLING
+        contentHtml += `
+            <div style="width:100%; background:rgba(0,0,0,0.4); border:1px solid gold; border-radius:12px; padding:15px; text-align:center; box-shadow:0 0 15px rgba(255,215,0,0.2);">
+                 <div style="font-size:2rem; margin-bottom:5px;">⚖️</div>
+                 <div style="color:gold; font-weight:bold; margin-bottom:10px; font-family:serif;">THE VERDICT</div>
+                 <div class="msg-content" style="font-style:italic; color:#fff; font-size:1.1rem; line-height:1.5;">${msg.content}</div>
+                 <div style="margin-top:10px; font-size:0.7rem; color:gold; opacity:0.7;">DIVINE INTERVENTION</div>
+            </div>
+           `;
+        // Override classes to center it
+        div.className = 'message oracle';
+        div.style.alignSelf = 'center';
+        div.style.maxWidth = '80%';
+        div.style.background = 'transparent';
+        div.style.padding = '0';
+      } else if (currentChatType === 'group' && !isMe) {
         // In Group: Show small avatar + Name
         contentHtml += `
             <div style="display:flex; align-items:flex-start;">
@@ -5783,6 +5827,21 @@
             el.textContent = el.dataset.original;
           }
         });
+      }
+    }
+
+    function openOracleModal() {
+      document.getElementById('oracleModal').classList.remove('hidden');
+    }
+
+    function summonOracle(mode) {
+      document.getElementById('oracleModal').classList.add('hidden');
+      if (socket && currentChatId) {
+        socket.emit('summon_oracle', {
+          group_id: currentChatId,
+          mode: mode
+        });
+        // Optional: Optimistic UI or just wait
       }
     }
   </script>
