@@ -3139,6 +3139,15 @@
       }
 
       document.getElementById(`tab-${tab}`).classList.add('active');
+
+      // UI Cleanup: If switching to 'status', we might want to hide the current chat or show a placeholder?
+      // For now, let's just ensure no conflicting overlays.
+      if (tab === 'status') {
+        // Optional: Clear or hide chat view if appropriate
+        // document.querySelector('.main-chat').style.opacity = '0.5'; 
+      } else {
+        // document.querySelector('.main-chat').style.opacity = '1';
+      }
     }
 
     function triggerStatusUpload() {
@@ -3328,7 +3337,11 @@
           list.appendChild(item);
         });
 
-      } catch (e) { console.error("Load status error", e); }
+      } catch (e) {
+        console.error("Load status error", e);
+        // Only alert if it's a critical failure that prevents usage, to avoid spamming
+        // alert("Failed to load statuses: " + e.message); 
+      }
     }
 
     // Status Viewer Logic
