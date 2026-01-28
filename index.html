@@ -2296,20 +2296,26 @@
 
     // Config
     const API_BASE = window.location.origin;
-
-
     let currentUser = null;
+    let socket = null;
     let currentChatId = null;
     let currentChatType = null; // 'private' or 'group'
-    let socket = null;
-    const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🙏', '🔥', '💯'];
+    let currentChatFriendId = null;
+    let currentChatName = null;
+    let selectedFriendIds = [];
 
-    // DOM Elements
+    // Translation Logic State
+    let currentTranslationLang = null;
+
+    // Whiteboard Statements
     const authScreen = document.getElementById('authScreen');
     const app = document.getElementById('app');
     const registerForm = document.getElementById('registerForm');
     const loginForm = document.getElementById('loginForm');
     const otpForm = document.getElementById('otpForm');
+    const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🙏', '🔥', '💯'];
+
+    // DOM Elements
     const chatList = document.getElementById('chatList');
     const groupList = document.getElementById('groupList');
     const incomingRequests = document.getElementById('incomingRequests');
@@ -2322,8 +2328,7 @@
     const deleteChatBtn = document.getElementById('deleteChatBtn');
     const deleteGroupBtn = document.getElementById('deleteGroupBtn');
 
-    // Selected friends for group creation
-    let selectedFriendIds = [];
+
 
     // Auth UI Helpers
     function showRegister() {
@@ -5724,11 +5729,11 @@
         resultArea.innerHTML = `<span style="color:#ef4444">Error: ${e.message}</span>`;
       }
     }
-      }
-    }
+
+
 
     // --- Translation Logic ---
-    let currentTranslationLang = null;
+    // let currentTranslationLang = null; // Defined at top
 
     function openTranslateModal() {
       document.getElementById('translateModal').classList.remove('hidden');
