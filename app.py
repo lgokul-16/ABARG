@@ -38,8 +38,24 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 db.init_app(app)
 
 # Create Tables
+# Create Tables & Auto-Migrate
+from sqlalchemy import text
 with app.app_context():
     db.create_all()
+    # Migration Check: 'type' column
+    try:
+        # Check if column exists strictly (Postgres preferred check, but fallback to naive add for broad support)
+        # Using a safer approach: try adding it and ignore error.
+        with db.engine.connect() as conn:
+            # Check table columns first
+            # Provide different syntax based on DB?
+            # Safer: "ALTER TABLE message ADD COLUMN type VARCHAR(20) DEFAULT 'text'"
+            # If it fails, catch it.
+            conn.execute(text("ALTER TABLE message ADD COLUMN type VARCHAR(20) DEFAULT 'text'"))
+            conn.commit()
+            print("Auto-migration: Added 'type' column.")
+    except Exception as e:
+        print(f"Auto-migration note: {e}")
 
 # === Supabase Client ===
 supabase = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY'])
