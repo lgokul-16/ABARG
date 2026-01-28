@@ -1725,15 +1725,124 @@ def share_notepad(note_id):
     db.session.commit()
     return jsonify({'msg': 'Shared successfully'}), 200
 
-# === DELTA AI Route ===
+# === AI Helper (Groq) ===
+import requests
+
+def call_groq_api(prompt, max_tokens=4096):
+    groq_key = os.environ.get('GROQ_API_KEY', '')
+    if not groq_key:
+        raise Exception("GROQ_API_KEY missing")
+    
+    headers = {
+        "Authorization": f"Bearer {groq_key.strip()}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messages": [
+            {"role": "system", "content": "You are a helpful AI assistant. Keep responses concise and relevant."},
+            {"role": "user", "content": prompt}
+        ],
+        "model": "llama-3.1-8b-instant",
+        "max_tokens": max_tokens
+    }
+    
+    try:
+        response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=15)
+        if response.status_code != 200:
+             raise Exception(f"Groq API Error ({response.status_code}): {response.text}")
+        data = response.json()
+        return data['choices'][0]['message']['content']
+    except Exception as e:
+        print(f"Groq Request Failed: {e}")
+        raise e
+
+# === AI Routes ===
+
+@app.route('/api/chat/<int:chat_id>/summarize', methods=['POST'])
+@jwt_required()
+def summarize_chat(chat_id):
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json()
+        chat_type = data.get('type', 'private')
+        
+        # Fetch Context (Last 50 messages)
+        messages = []
+        if chat_type == 'private':
+            # Verify access
+            part = Participant.query.filter_by(conversation_id=chat_id, user_id=user_id).first()
+            if not part: return jsonify({"msg": "Unauthorized"}), 403
+            messages = Message.query.filter_by(conversation_id=chat_id).order_by(Message.timestamp.desc()).limit(50).all()
+        else:
+            member = GroupMember.query.filter_by(group_id=chat_id, user_id=user_id).first()
+            if not member: return jsonify({"msg": "Unauthorized"}), 403
+            messages = Message.query.filter_by(group_id=chat_id).order_by(Message.timestamp.desc()).limit(50).all()
+            
+        if not messages:
+            return jsonify({"result": "No messages to summarize."}), 200
+
+        # Construct Transcript (Reverse order to be chronological)
+        transcript = ""
+        for msg in reversed(messages):
+            sender = db.session.get(User, msg.sender_id)
+            name = sender.username if sender else "Unknown"
+            transcript += f"{name}: {msg.content}\n"
+
+        prompt = f"Summarize the following conversation concisely:\n\n{transcript}"
+        summary = call_groq_api(prompt)
+        return jsonify({"result": summary}), 200
+    except Exception as e:
+        return jsonify({"msg": str(e)}), 500
+
+
+@app.route('/api/chat/<int:chat_id>/ai_search', methods=['POST'])
+@jwt_required()
+def ai_search_chat(chat_id):
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json()
+        query = data.get('query')
+        chat_type = data.get('type', 'private')
+
+        if not query:
+            return jsonify({"msg": "Query required"}), 400
+
+        # Fetch Context (Last 50 messages)
+        messages = []
+        if chat_type == 'private':
+            part = Participant.query.filter_by(conversation_id=chat_id, user_id=user_id).first()
+            if not part: return jsonify({"msg": "Unauthorized"}), 403
+            messages = Message.query.filter_by(conversation_id=chat_id).order_by(Message.timestamp.desc()).limit(50).all()
+        else:
+            member = GroupMember.query.filter_by(group_id=chat_id, user_id=user_id).first()
+            if not member: return jsonify({"msg": "Unauthorized"}), 403
+            messages = Message.query.filter_by(group_id=chat_id).order_by(Message.timestamp.desc()).limit(50).all()
+            
+        transcript = ""
+        for msg in reversed(messages):
+            sender = db.session.get(User, msg.sender_id)
+            name = sender.username if sender else "Unknown"
+            transcript += f"{name}: {msg.content}\n"
+            
+        # Limit transcript length to ensure prompt fits if needed (though 4096 out / 128k in context for Llama 3.1 is huge)
+        # Llama 3.1 8B instant has 128k context, so 50 messages is fine.
+
+        prompt = f"Based ONLY on the conversation below, answer the question.\n\nConversation:\n{transcript}\n\nQuestion: {query}"
+        answer = call_groq_api(prompt)
+        return jsonify({"result": answer}), 200
+    except Exception as e:
+        return jsonify({"msg": str(e)}), 500
+
+
+# === DELTA AI Route (Refactored) ===
 @app.route('/api/delta/ask', methods=['POST'])
 @jwt_required()
 def ask_delta():
     try:
         data = request.get_json()
         note_content = data.get('content', '')
-        action = data.get('action', 'summarize') # summarize, action_items, polish, expand, qa, explain_code
-        user_query = data.get('query', '') # For Q&A
+        action = data.get('action', 'summarize')
+        user_query = data.get('query', '') 
 
         if not note_content:
             return jsonify({"msg": "Note content is empty"}), 400
@@ -1741,55 +1850,24 @@ def ask_delta():
         # Construct Prompt
         prompt = ""
         if action == 'summarize':
-            prompt = f"Summarize the following note concisely:\\n\\n{note_content}"
+            prompt = f"Summarize the following note concisely:\n\n{note_content}"
         elif action == 'action_items':
-            prompt = f"Extract a checklist of action items/tasks from this note. Return them as a markdown list:\\n\\n{note_content}"
+            prompt = f"Extract a checklist of action items/tasks from this note. Return them as a markdown list:\n\n{note_content}"
         elif action == 'polish':
-            prompt = f"Rewrite the following text to be more professional, fix grammar, and improve clarity:\\n\\n{note_content}"
+            prompt = f"Rewrite the following text to be more professional, fix grammar, and improve clarity:\n\n{note_content}"
         elif action == 'expand':
-            prompt = f"Expand on the following points, adding relevant details and creative ideas:\\n\\n{note_content}"
+            prompt = f"Expand on the following points, adding relevant details and creative ideas:\n\n{note_content}"
         elif action == 'qa':
             if not user_query:
                 return jsonify({"msg": "Query required for Q&A"}), 400
-            prompt = f"Based ONLY on the following note, answer the question: '{user_query}'\\n\\nNote Content:\\n{note_content}"
+            prompt = f"Based ONLY on the following note, answer the question: '{user_query}'\n\nNote Content:\n{note_content}"
         elif action == 'explain_code':
-            prompt = f"Explain the following code snippet simply:\\n\\n{note_content}"
+            prompt = f"Explain the following code snippet simply:\n\n{note_content}"
         else:
             return jsonify({"msg": "Invalid action"}), 400
 
-        # EXCLUSIVE: Groq (Llama 3) via Raw HTTP
-        try:
-            import requests
-            groq_key = os.environ.get('GROQ_API_KEY', '')
-            if not groq_key:
-                 return jsonify({"msg": "Server configuration error: GROQ_API_KEY missing."}), 500
-            
-            # Ensure the key is a string and strip any whitespace
-            groq_key = str(groq_key).strip()
-            
-            headers = {
-                "Authorization": f"Bearer {groq_key}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "messages": [
-                    {"role": "system", "content": "You are a helpful AI assistant. Keep responses concise and relevant."},
-                    {"role": "user", "content": prompt}
-                ],
-                "model": "llama-3.1-8b-instant"
-            }
-            
-            response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=10)
-            
-            if response.status_code != 200:
-                return jsonify({"msg": f"Groq API Error ({response.status_code}): {response.text}"}), 500
-                
-            data = response.json()
-            return jsonify({"result": data['choices'][0]['message']['content']}), 200
-
-        except Exception as e_groq:
-            print(f"Groq Error: {e_groq}")
-            return jsonify({"msg": f"Groq Error: {str(e_groq)}"}), 500
+        result = call_groq_api(prompt)
+        return jsonify({"result": result}), 200
 
     except Exception as e:
         print(f"DELTA AI Error: {e}")

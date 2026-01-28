@@ -1689,6 +1689,12 @@
             <div style="display:flex;align-items:center;gap:10px;">
               <img id="chatDp" class="dp" />
               <span>Select a chat</span>
+              <button onclick="fetchChatSummary()"
+                style="margin-left:10px; padding:5px 10px; font-size:0.8em; background:var(--glass-bg); color:var(--text-main); border:1px solid var(--border-elegant); border-radius:15px;"
+                title="Summarize Conversation">✨ Summary</button>
+              <button onclick="openAISearchModal()"
+                style="padding:5px 10px; font-size:0.8em; background:var(--glass-bg); color:var(--text-main); border:1px solid var(--border-elegant); border-radius:15px;"
+                title="Ask AI">🔍 AI Search</button>
             </div>
             <div class="chat-actions">
               <button id="callBtn" class="hidden" onclick="startCall()" title="Call">📞</button>
@@ -1902,6 +1908,86 @@
         </div>
       </div>
     </div>
+
+    <!-- AI Summary Modal -->
+    <div id="summaryModal" class="hidden modal" style="z-index: 5005;">
+      <div class="modal-content">
+        <h3>✨ Chat Summary</h3>
+        <div id="summaryContent"
+          style="background:rgba(0,0,0,0.2); padding:15px; border-radius:10px; margin-top:10px; max-height:300px; overflow-y:auto; font-size:0.9rem; white-space:pre-wrap; line-height:1.5;">
+          Loading...</div>
+        <div style="margin-top:20px;">
+          <button onclick="document.getElementById('summaryModal').classList.add('hidden')" class="secondary-btn"
+            style="width:100%;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Search Modal -->
+    <div id="aiSearchModal" class="hidden modal" style="z-index: 5005;">
+      <div class="modal-content">
+        <h3>🔍 AI Search</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem;">Ask a question about this conversation.</p>
+        <input type="text" id="aiSearchQuery" placeholder="e.g. What time did we discuss meeting?"
+          style="width:100%; margin-top:10px; margin-bottom:10px;">
+        <button onclick="performAISearch()">Ask AI</button>
+
+        <div id="aiSearchResult" class="hidden"
+          style="background:rgba(0,0,0,0.2); padding:15px; border-radius:10px; margin-top:15px; max-height:200px; overflow-y:auto; font-size:0.9rem; white-space:pre-wrap; line-height:1.5;">
+        </div>
+
+        <div style="margin-top:20px;">
+          <button onclick="document.getElementById('aiSearchModal').classList.add('hidden')" class="secondary-btn"
+            style="width:100%;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      async function fetchChatSummary() {
+        if (!currentChatId) return alert("Select a chat first.");
+        document.getElementById('summaryModal').classList.remove('hidden');
+        document.getElementById('summaryContent').textContent = "Generating summary with AI...";
+
+        try {
+          const res = await api(`/chat/${currentChatId}/summarize`, {
+            method: 'POST',
+            body: JSON.stringify({ type: currentChatType })
+          });
+          document.getElementById('summaryContent').textContent = res.result || "No summary available.";
+        } catch (e) {
+          document.getElementById('summaryContent').textContent = "Error: " + e.message;
+        }
+      }
+
+      function openAISearchModal() {
+        if (!currentChatId) return alert("Select a chat first.");
+        document.getElementById('aiSearchModal').classList.remove('hidden');
+        document.getElementById('aiSearchQuery').value = '';
+        document.getElementById('aiSearchResult').classList.add('hidden');
+        document.getElementById('aiSearchResult').textContent = '';
+      }
+
+      async function performAISearch() {
+        const query = document.getElementById('aiSearchQuery').value.trim();
+        if (!query) return;
+
+        const resultDiv = document.getElementById('aiSearchResult');
+        resultDiv.classList.remove('hidden');
+        resultDiv.textContent = "Searching...";
+
+        try {
+          const res = await api(`/chat/${currentChatId}/ai_search`, {
+            method: 'POST',
+            body: JSON.stringify({ type: currentChatType, query: query })
+          });
+          resultDiv.textContent = res.result || "No answer found.";
+        } catch (e) {
+          resultDiv.textContent = "Error: " + e.message;
+        }
+      }
+    </script>
+
 
     <!-- DELTA AI Modal -->
     <div id="deltaModal" class="hidden modal" style="z-index: 5000;">
