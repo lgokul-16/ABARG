@@ -1950,7 +1950,7 @@
         document.getElementById('summaryContent').textContent = "Generating summary with AI...";
 
         try {
-          const res = await api(`/chat/${currentChatId}/summarize`, {
+          const res = await api(`/api/chat/${currentChatId}/summarize`, {
             method: 'POST',
             body: JSON.stringify({ type: currentChatType })
           });
@@ -1977,7 +1977,7 @@
         resultDiv.textContent = "Searching...";
 
         try {
-          const res = await api(`/chat/${currentChatId}/ai_search`, {
+          const res = await api(`/api/chat/${currentChatId}/ai_search`, {
             method: 'POST',
             body: JSON.stringify({ type: currentChatType, query: query })
           });
