@@ -1529,6 +1529,7 @@ def handle_translate_message(data):
 
 # === The Oracle ===
 @socketio.on('summon_oracle')
+@jwt_required()
 def handle_oracle(data):
     try:
         group_id = data.get('group_id')
