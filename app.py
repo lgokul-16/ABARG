@@ -1489,9 +1489,14 @@ def handle_translate_batch(data):
         # We need to make sure we get just JSON
         response = call_groq_api(prompt + "\nJSON:")
         
-        # Clean response (sometimes AI adds markdown)
-        json_str = response.replace('```json', '').replace('```', '').strip()
-        
+        # Robust JSON Extraction
+        import re
+        match = re.search(r'\{.*\}', response, re.DOTALL)
+        if match:
+             json_str = match.group(0)
+        else:
+             json_str = response # Fallback
+
         translated_map = json.loads(json_str)
         
         emit('translation_batch_result', {'results': translated_map})

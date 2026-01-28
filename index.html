@@ -1798,81 +1798,69 @@
       </div>
     </div>
 
-    <!-- Status Viewer -->
-    <div id="statusViewer">
-      <div id="statusProgressContainer"></div>
-      <div style="position:absolute; top:20px; left:20px; z-index:5002; display:flex; align-items:center;">
-        <img id="statusViewDp" src=""
-          style="width:40px; height:40px; border-radius:50%; margin-right:10px; border:1px solid white;">
+    <!-- Oracle Modal -->
+    <div id="oracleModal" class="hidden"
+      style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
+      <div
+        style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px); text-align:center;">
+        <h3 style="margin-bottom:5px; color:gold;">The Oracle ⚖️</h3>
+        <p style="margin-bottom:15px; font-size:0.9rem; color:#ddd;">Summon the divine judge.</p>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <button onclick="summonOracle('judge')"
+            style="padding:12px; border-radius:12px; background:rgba(255,215,0,0.2); color:gold; border:1px solid gold; font-weight:bold;">⚖️
+            The Judge (Settle Dispute)</button>
+          <button onclick="summonOracle('decider')"
+            style="padding:12px; border-radius:12px; background:rgba(192,192,192,0.2); color:#ddd; border:1px solid #aaa; font-weight:bold;">🎲
+            The Decider (Pick Option)</button>
+        </div>
+        <button onclick="document.getElementById('oracleModal').classList.add('hidden')"
+          style="margin-top:15px; width:100%; padding:8px; background:transparent; border:none; color:#888;">Dismiss</button>
       </div>
     </div>
 
-  </div>
-  </div>
-
-  <!-- Oracle Modal -->
-  <div id="oracleModal" class="hidden"
-    style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
-    <div
-      style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px); text-align:center;">
-      <h3 style="margin-bottom:5px; color:gold;">The Oracle ⚖️</h3>
-      <p style="margin-bottom:15px; font-size:0.9rem; color:#ddd;">Summon the divine judge.</p>
-      <div style="display:flex; flex-direction:column; gap:10px;">
-        <button onclick="summonOracle('judge')"
-          style="padding:12px; border-radius:12px; background:rgba(255,215,0,0.2); color:gold; border:1px solid gold; font-weight:bold;">⚖️
-          The Judge (Settle Dispute)</button>
-        <button onclick="summonOracle('decider')"
-          style="padding:12px; border-radius:12px; background:rgba(192,192,192,0.2); color:#ddd; border:1px solid #aaa; font-weight:bold;">🎲
-          The Decider (Pick Option)</button>
+    <!-- Translate Modal -->
+    <div id="translateModal" class="hidden"
+      style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
+      <div
+        style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px);">
+        <h3 style="margin-bottom:15px;">Select Language</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <button onclick="setTranslationLang(null)"
+            style="grid-column:span 2; padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Original</button>
+          <button onclick="setTranslationLang('es')"
+            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Spanish
+            🇪🇸</button>
+          <button onclick="setTranslationLang('fr')"
+            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">French 🇫🇷</button>
+          <button onclick="setTranslationLang('de')"
+            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">German 🇩🇪</button>
+          <button onclick="setTranslationLang('hi')"
+            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Hindi 🇮🇳</button>
+          <button onclick="setTranslationLang('zh-CN')"
+            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Chinese
+            🇨🇳</button>
+          <button onclick="setTranslationLang('ja')"
+            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Japanese
+            🇯🇵</button>
+          <button onclick="setTranslationLang('ru')"
+            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Russian
+            🇷🇺</button>
+          <button onclick="setTranslationLang('ar')"
+            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Arabic 🇸🇦</button>
+          <button onclick="setTranslationLang('ta')"
+            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Tamil 🇮🇳</button>
+          <button onclick="setTranslationLang('it')"
+            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Italian
+            🇮🇹</button>
+        </div>
+        <button onclick="closeTranslateModal()"
+          style="margin-top:15px; width:100%; padding:10px; background:transparent; border:1px solid #666; color:#ccc; border-radius:8px;">Cancel</button>
       </div>
-      <button onclick="document.getElementById('oracleModal').classList.add('hidden')"
-        style="margin-top:15px; width:100%; padding:8px; background:transparent; border:none; color:#888;">Dismiss</button>
     </div>
-  </div>
-
-  <!-- Translate Modal -->
-  <div id="translateModal" class="hidden"
-    style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
-    <div
-      style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px);">
-      <h3 style="margin-bottom:15px;">Select Language</h3>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-        <button onclick="setTranslationLang(null)"
-          style="grid-column:span 2; padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Original</button>
-        <button onclick="setTranslationLang('es')"
-          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Spanish
-          🇪🇸</button>
-        <button onclick="setTranslationLang('fr')"
-          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">French 🇫🇷</button>
-        <button onclick="setTranslationLang('de')"
-          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">German 🇩🇪</button>
-        <button onclick="setTranslationLang('hi')"
-          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Hindi 🇮🇳</button>
-        <button onclick="setTranslationLang('zh-CN')"
-          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Chinese
-          🇨🇳</button>
-        <button onclick="setTranslationLang('ja')"
-          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Japanese
-          🇯🇵</button>
-        <button onclick="setTranslationLang('ru')"
-          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Russian
-          🇷🇺</button>
-        <button onclick="setTranslationLang('ar')"
-          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Arabic 🇸🇦</button>
-        <button onclick="setTranslationLang('ta')"
-          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Tamil 🇮🇳</button>
-        <button onclick="setTranslationLang('it')"
-          style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Italian
-          🇮🇹</button>
-      </div>
-      <button onclick="closeTranslateModal()"
-        style="margin-top:15px; width:100%; padding:10px; background:transparent; border:1px solid #666; color:#ccc; border-radius:8px;">Cancel</button>
+    <div>
+      <div id="statusViewName" style="color:white; font-weight:600;">User</div>
+      <div id="statusViewTime" style="color:rgba(255,255,255,0.7); font-size:0.8rem;">Just now</div>
     </div>
-  </div>
-  <div>
-    <div id="statusViewName" style="color:white; font-weight:600;">User</div>
-    <div id="statusViewTime" style="color:rgba(255,255,255,0.7); font-size:0.8rem;">Just now</div>
-  </div>
   </div>
   <button onclick="closeStatusViewer()"
     style="position:absolute; top:20px; right:20px; z-index:5002; background:none; border:none; color:white; font-size:2rem;">✕</button>
