@@ -1,11 +1,13 @@
 import os
 from dotenv import load_dotenv
+from datetime import timedelta
 
 load_dotenv()
 
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'supersecret123')
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7) # Extend session to 7 days
     uri = os.environ.get('DATABASE_URL', 'sqlite:///ultimatum.db')
     if uri and uri.startswith("postgres://"):
         uri = uri.replace("postgres://", "postgresql://", 1)

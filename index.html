@@ -1907,7 +1907,6 @@
     <div id="deltaModal" class="hidden modal" style="z-index: 5000;">
       <div class="modal-content">
         <h3>✨ DELTA AI</h3>
-        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px;">Powered by Gemini Flash</p>
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
           <button onclick="triggerDelta('summarize')" class="secondary-btn">📝 Summarize</button>
@@ -4404,6 +4403,43 @@
 
 
 
+
+
+    function backToSidebar() {
+      // 1. Hide specialized views
+      document.getElementById('whiteboardDashboard').classList.add('hidden');
+      document.getElementById('notepadDashboard').classList.add('hidden');
+      document.getElementById('whiteboardUI').classList.add('hidden');
+      document.getElementById('notepadUI').classList.add('hidden');
+
+      // 2. Restore Main Layout
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.remove('hidden');
+
+      // 3. Handle content visibility based on state
+      const chatArea = document.getElementById('chatArea');
+      const welcome = document.getElementById('welcomeScreen');
+
+      if (window.innerWidth <= 768) {
+        // Mobile: Always go back to list
+        sidebar.style.display = 'flex';
+        chatArea.classList.add('hidden');
+        welcome.classList.add('hidden');
+        // cleanup inline styles from previous toggles if any
+        chatArea.style.display = '';
+      } else {
+        // Desktop: Sidebar + Content
+        sidebar.style.display = 'flex'; // Ensure visible
+
+        if (currentChatId) {
+          chatArea.classList.remove('hidden');
+          welcome.classList.add('hidden');
+        } else {
+          chatArea.classList.add('hidden');
+          welcome.classList.remove('hidden');
+        }
+      }
+    }
 
     /* ================= Notepad Logic ================= */
     let currentNoteId = null;
