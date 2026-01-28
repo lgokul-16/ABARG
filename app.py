@@ -1757,43 +1757,39 @@ def ask_delta():
         else:
             return jsonify({"msg": "Invalid action"}), 400
 
-        # === AI Integration: OpenRouter (Free Models) ===
+        # EXCLUSIVE: Groq (Llama 3) via Raw HTTP
         try:
             import requests
-            openrouter_key = os.environ.get('OPENROUTER_API_KEY')
-            if not openrouter_key:
-                 return jsonify({"msg": "Server configuration error: OPENROUTER_API_KEY missing."}), 500
+            groq_key = os.environ.get('GROQ_API_KEY', '')
+            if not groq_key:
+                 return jsonify({"msg": "Server configuration error: GROQ_API_KEY missing."}), 500
             
             # Ensure the key is a string and strip any whitespace
-            openrouter_key = str(openrouter_key).strip()
+            groq_key = str(groq_key).strip()
             
             headers = {
-                "Authorization": f"Bearer {openrouter_key}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://ultimatum-app.com",
-                "X-Title": "Ultimatum DELTA AI"
+                "Authorization": f"Bearer {groq_key}",
+                "Content-Type": "application/json"
             }
-            
             payload = {
-                "model": "google/gemini-2.0-flash-exp:free",  # Confirmed Free model
                 "messages": [
+                    {"role": "system", "content": "You are a helpful AI assistant. Keep responses concise and relevant."},
                     {"role": "user", "content": prompt}
-                ]
+                ],
+                "model": "llama-3.1-8b-instant"
             }
             
-            response = requests.post("https://openrouter.ai/api/v1/chat/completions", json=payload, headers=headers, timeout=30)
+            response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=10)
             
-            if response.status_code == 429:  # Rate limit
-                return jsonify({"msg": "AI is busy right now. Please wait a moment and try again."}), 429
-            elif response.status_code != 200:
-                return jsonify({"msg": f"AI API Error ({response.status_code}): {response.text}"}), 500
+            if response.status_code != 200:
+                return jsonify({"msg": f"Groq API Error ({response.status_code}): {response.text}"}), 500
                 
             data = response.json()
             return jsonify({"result": data['choices'][0]['message']['content']}), 200
 
-        except Exception as e_ai:
-            print(f"AI Error: {e_ai}")
-            return jsonify({"msg": f"AI Error: {str(e_ai)}"}), 500
+        except Exception as e_groq:
+            print(f"Groq Error: {e_groq}")
+            return jsonify({"msg": f"Groq Error: {str(e_groq)}"}), 500
 
     except Exception as e:
         print(f"DELTA AI Error: {e}")
