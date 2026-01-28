@@ -1796,344 +1796,377 @@
             <p>Select a chat to start messaging</p>
           </div>
         </div>
-      </div>
-    </div>
+        <!-- Status Viewer -->
+        <div id="statusViewer" class="hidden" style="position:fixed; inset:0; z-index:9000; background:black;">
+          <div id="statusProgressContainer"
+            style="position:absolute; top:10px; left:10px; right:10px; height:4px; display:flex; gap:4px; z-index:9002;">
+            <!-- Bars via JS -->
+          </div>
+          <div style="position:absolute; top:20px; left:20px; z-index:5002; display:flex; align-items:center;">
+            <img id="statusViewDp" src=""
+              style="width:40px; height:40px; border-radius:50%; margin-right:10px; border:1px solid white;">
+            <span id="statusViewName" style="font-weight:bold; text-shadow:0 1px 3px black; color: white;"></span>
+            <span id="statusViewTime"
+              style="margin-left:10px; opacity:0.7; font-size:0.8rem; text-shadow:0 1px 3px black; color: white;"></span>
+          </div>
+          <button onclick="closeStatusViewer()"
+            style="position:absolute; top:20px; right:20px; z-index:5002; background:transparent; border:none; font-size:1.5rem; color:white;">✕</button>
 
-    <!-- Oracle Modal -->
-    <div id="oracleModal" class="hidden"
-      style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
-      <div
-        style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px); text-align:center;">
-        <h3 style="margin-bottom:5px; color:gold;">The Oracle ⚖️</h3>
-        <p style="margin-bottom:15px; font-size:0.9rem; color:#ddd;">Summon the divine judge.</p>
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          <button onclick="summonOracle('judge')"
-            style="padding:12px; border-radius:12px; background:rgba(255,215,0,0.2); color:gold; border:1px solid gold; font-weight:bold;">⚖️
-            The Judge (Settle Dispute)</button>
-          <button onclick="summonOracle('decider')"
-            style="padding:12px; border-radius:12px; background:rgba(192,192,192,0.2); color:#ddd; border:1px solid #aaa; font-weight:bold;">🎲
-            The Decider (Pick Option)</button>
+          <div id="statusContentArea"
+            style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+            <!-- Image or Video injected here -->
+          </div>
+
+          <!-- Navigation Zones -->
+          <div onclick="navigateStatus(-1)"
+            style="position:absolute; left:0; top:0; bottom:0; width:30%; z-index:5001;"></div>
+          <div onmousedown="handleStatusDown(event)" onmouseup="handleStatusUp(event)"
+            ontouchstart="handleStatusDown(event)" ontouchend="handleStatusUp(event)"
+            style="position:absolute; left:30%; top:0; bottom:0; width:40%; z-index:5001;"></div>
+          <div onclick="navigateStatus(1)"
+            style="position:absolute; right:0; top:0; bottom:0; width:30%; z-index:5001;"></div>
         </div>
-        <button onclick="document.getElementById('oracleModal').classList.add('hidden')"
-          style="margin-top:15px; width:100%; padding:8px; background:transparent; border:none; color:#888;">Dismiss</button>
-      </div>
-    </div>
 
-    <!-- Translate Modal -->
-    <div id="translateModal" class="hidden"
-      style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
-      <div
-        style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px);">
-        <h3 style="margin-bottom:15px;">Select Language</h3>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-          <button onclick="setTranslationLang(null)"
-            style="grid-column:span 2; padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Original</button>
-          <button onclick="setTranslationLang('es')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Spanish
-            🇪🇸</button>
-          <button onclick="setTranslationLang('fr')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">French 🇫🇷</button>
-          <button onclick="setTranslationLang('de')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">German 🇩🇪</button>
-          <button onclick="setTranslationLang('hi')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Hindi 🇮🇳</button>
-          <button onclick="setTranslationLang('zh-CN')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Chinese
-            🇨🇳</button>
-          <button onclick="setTranslationLang('ja')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Japanese
-            🇯🇵</button>
-          <button onclick="setTranslationLang('ru')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Russian
-            🇷🇺</button>
-          <button onclick="setTranslationLang('ar')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Arabic 🇸🇦</button>
-          <button onclick="setTranslationLang('ta')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Tamil 🇮🇳</button>
-          <button onclick="setTranslationLang('it')"
-            style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Italian
-            🇮🇹</button>
+        <!-- Oracle Modal -->
+        <div id="oracleModal" class="hidden"
+          style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
+          <div
+            style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px); text-align:center;">
+            <h3 style="margin-bottom:5px; color:gold;">The Oracle ⚖️</h3>
+            <p style="margin-bottom:15px; font-size:0.9rem; color:#ddd;">Summon the divine judge.</p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <button onclick="summonOracle('judge')"
+                style="padding:12px; border-radius:12px; background:rgba(255,215,0,0.2); color:gold; border:1px solid gold; font-weight:bold;">⚖️
+                The Judge (Settle Dispute)</button>
+              <button onclick="summonOracle('decider')"
+                style="padding:12px; border-radius:12px; background:rgba(192,192,192,0.2); color:#ddd; border:1px solid #aaa; font-weight:bold;">🎲
+                The Decider (Pick Option)</button>
+            </div>
+            <button onclick="document.getElementById('oracleModal').classList.add('hidden')"
+              style="margin-top:15px; width:100%; padding:8px; background:transparent; border:none; color:#888;">Dismiss</button>
+          </div>
         </div>
-        <button onclick="closeTranslateModal()"
-          style="margin-top:15px; width:100%; padding:10px; background:transparent; border:1px solid #666; color:#ccc; border-radius:8px;">Cancel</button>
-      </div>
-    </div>
-    <div>
-      <div id="statusViewName" style="color:white; font-weight:600;">User</div>
-      <div id="statusViewTime" style="color:rgba(255,255,255,0.7); font-size:0.8rem;">Just now</div>
-    </div>
-  </div>
-  <button onclick="closeStatusViewer()"
-    style="position:absolute; top:20px; right:20px; z-index:5002; background:none; border:none; color:white; font-size:2rem;">✕</button>
 
-  <div id="statusContentArea"></div>
-
-  <div class="status-like-container">
-    <div id="statusLikeBtn" class="status-like-btn"
-      onclick="toggleStatusLike(currentStatusGroup.statuses[currentViewerItemIdx].id)">🤍</div>
-    <div id="statusLikeCount" class="status-like-count"></div>
-  </div>
-
-  <div id="statusDeleteBtnContainer" class="hidden" style="position:absolute; top:20px; right:60px; z-index:5003;">
-    <button onclick="deleteStatus(currentStatusGroup.statuses[currentViewerItemIdx].id)"
-      style="background:rgba(0,0,0,0.5); border:none; color:white; font-size:1.5rem; cursor:pointer; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">🗑️</button>
-  </div>
-  </div>
-
-  <!-- Modals -->
-  <div id="addFriendModal" class="hidden modal">
-    <div class="modal-content">
-      <h3>Add Friend</h3>
-      <div style="position:relative;">
-        <input type="text" id="friendUsername" placeholder="Enter username..." style="width:100%; margin-bottom: 5px;"
-          oninput="searchUsers(this.value)" autocomplete="off" />
-        <div id="searchResults"></div>
-      </div>
-      <div style="margin-top:20px; display: flex; gap: 10px;">
-        <button onclick="sendFriendRequest()" style="flex:1;">Send Request</button>
-        <button onclick="hideAddFriend()" class="secondary-btn" style="flex:1;">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="createGroupModal" class="hidden modal">
-    <div class="modal-content">
-      <h3>Create Group</h3>
-      <input type="text" id="groupName" placeholder="Group name" style="width:100%; margin-bottom: 10px;" />
-      <label style="display:block; margin-bottom:5px; color:var(--text-muted); font-size:0.9rem;">Select
-        Friends:</label>
-      <div class="member-list" id="friendSelectionList"
-        style="max-height: 200px; margin-bottom: 20px; overflow-y: auto;"></div>
-      <div style="display: flex; gap: 10px;">
-        <button onclick="createGroup()" style="flex:1;">Create</button>
-        <button onclick="hideCreateGroup()" class="secondary-btn" style="flex:1;">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="groupMembersModal" class="hidden modal">
-    <div class="modal-content">
-      <h3>Group Members</h3>
-      <div class="member-list" id="groupMembersList"></div>
-      <div style="margin-top:20px; display:flex; gap:10px;">
-        <button id="addMemberBtn" onclick="showAddMemberModal()" style="flex:1;" class="hidden">Add Member</button>
-        <button onclick="hideGroupMembers()" class="secondary-btn" style="flex:1;">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="addMemberModal" class="hidden modal" style="z-index: 1100;"> <!-- Higher z-index -->
-    <div class="modal-content">
-      <h3>Add Member</h3>
-      <div class="member-list" id="addMemberFriendList" style="max-height: 200px; overflow-y: auto;"></div>
-      <div style="margin-top:20px;">
-        <button onclick="document.getElementById('addMemberModal').classList.add('hidden')" class="secondary-btn"
-          style="width:100%;">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-
-
-  <div id="reactionDetailsModal" class="hidden modal">
-    <div class="modal-content">
-      <h3>Reactions</h3>
-      <div class="member-list" id="reactionDetailsList" style="max-height: 300px; overflow-y: auto;"></div>
-      <div style="margin-top:20px;">
-        <button onclick="document.getElementById('reactionDetailsModal').classList.add('hidden')" class="secondary-btn"
-          style="width:100%;">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="seenDetailsModal" class="hidden modal">
-    <div class="modal-content">
-      <h3>Seen By</h3>
-      <div class="member-list" id="seenDetailsList" style="max-height: 300px; overflow-y: auto;"></div>
-      <div style="margin-top:20px;">
-        <button onclick="document.getElementById('seenDetailsModal').classList.add('hidden')" class="secondary-btn"
-          style="width:100%;">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="shareItemModal" class="hidden modal">
-    <div class="modal-content">
-      <h3>Share With</h3>
-      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:10px;">Select a friend to send a copy.</p>
-      <div class="member-list" id="shareFriendList" style="max-height: 300px; overflow-y: auto;"></div>
-      <div style="margin-top:20px;">
-        <button onclick="document.getElementById('shareItemModal').classList.add('hidden')" class="secondary-btn"
-          style="width:100%;">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- AI Summary Modal -->
-  <div id="summaryModal" class="hidden modal" style="z-index: 5005;">
-    <div class="modal-content">
-      <h3>✨ Chat Summary</h3>
-      <div id="summaryContent"
-        style="background:rgba(0,0,0,0.2); padding:15px; border-radius:10px; margin-top:10px; max-height:300px; overflow-y:auto; font-size:0.9rem; white-space:pre-wrap; line-height:1.5;">
-        Loading...</div>
-      <div style="margin-top:20px;">
-        <button onclick="document.getElementById('summaryModal').classList.add('hidden')" class="secondary-btn"
-          style="width:100%;">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- AI Search Modal -->
-  <div id="aiSearchModal" class="hidden modal" style="z-index: 5005;">
-    <div class="modal-content">
-      <h3>🔍 AI Search</h3>
-      <p style="color:var(--text-muted); font-size:0.9rem;">Ask a question about this conversation.</p>
-      <input type="text" id="aiSearchQuery" placeholder="e.g. What time did we discuss meeting?"
-        style="width:100%; margin-top:10px; margin-bottom:10px;">
-      <button onclick="performAISearch()">Ask AI</button>
-
-      <div id="aiSearchResult" class="hidden"
-        style="background:rgba(0,0,0,0.2); padding:15px; border-radius:10px; margin-top:15px; max-height:200px; overflow-y:auto; font-size:0.9rem; white-space:pre-wrap; line-height:1.5;">
-      </div>
-
-      <div style="margin-top:20px;">
-        <button onclick="document.getElementById('aiSearchModal').classList.add('hidden')" class="secondary-btn"
-          style="width:100%;">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    async function fetchChatSummary() {
-      if (!currentChatId) return alert("Select a chat first.");
-      document.getElementById('summaryModal').classList.remove('hidden');
-      document.getElementById('summaryContent').textContent = "Generating summary with AI...";
-
-      try {
-        const res = await api(`/api/chat/${currentChatId}/summarize`, {
-          method: 'POST',
-          body: JSON.stringify({ type: currentChatType })
-        });
-        document.getElementById('summaryContent').textContent = res.result || "No summary available.";
-      } catch (e) {
-        document.getElementById('summaryContent').textContent = "Error: " + e.message;
-      }
-    }
-
-    function openAISearchModal() {
-      if (!currentChatId) return alert("Select a chat first.");
-      document.getElementById('aiSearchModal').classList.remove('hidden');
-      document.getElementById('aiSearchQuery').value = '';
-      document.getElementById('aiSearchResult').classList.add('hidden');
-      document.getElementById('aiSearchResult').textContent = '';
-    }
-
-    async function performAISearch() {
-      const query = document.getElementById('aiSearchQuery').value.trim();
-      if (!query) return;
-
-      const resultDiv = document.getElementById('aiSearchResult');
-      resultDiv.classList.remove('hidden');
-      resultDiv.textContent = "Searching...";
-
-      try {
-        const res = await api(`/api/chat/${currentChatId}/ai_search`, {
-          method: 'POST',
-          body: JSON.stringify({ type: currentChatType, query: query })
-        });
-        resultDiv.textContent = res.result || "No answer found.";
-      } catch (e) {
-        resultDiv.textContent = "Error: " + e.message;
-      }
-    }
-  </script>
-
-
-  <!-- DELTA AI Modal -->
-  <div id="deltaModal" class="hidden modal" style="z-index: 5000;">
-    <div class="modal-content">
-      <h3>✨ DELTA AI</h3>
-
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
-        <button onclick="triggerDelta('summarize')" class="secondary-btn">📝 Summarize</button>
-        <button onclick="triggerDelta('action_items')" class="secondary-btn">✅ Action Items</button>
-        <button onclick="triggerDelta('polish')" class="secondary-btn">🎩 Polish / Professional</button>
-        <button onclick="triggerDelta('expand')" class="secondary-btn">🧠 Brainstorm / Expand</button>
-        <button onclick="triggerDelta('explain_code')" class="secondary-btn">💻 Explain Code</button>
-      </div>
-
-      <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; margin-bottom:15px;">
-        <label style="display:block;margin-bottom:5px;font-size:0.9rem;">Ask a Question about this note:</label>
-        <div style="display:flex; gap:5px;">
-          <input type="text" id="deltaQuery" placeholder="e.g. What is the deadline?" style="flex:1;">
-          <button onclick="triggerDelta('qa')">Ask</button>
-        </div>
-      </div>
-
-      <div id="deltaResultArea" class="hidden"
-        style="background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; margin-bottom:15px; max-height:200px; overflow-y:auto; font-size:0.9rem; white-space:pre-wrap;">
-      </div>
-
-      <div style="display:flex; justify-content:flex-end;">
-        <button onclick="document.getElementById('deltaModal').classList.add('hidden')"
-          class="secondary-btn">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ... existing modals ... -->
-  <div id="settingsModal" class="hidden modal">
-    <div class="modal-content">
-      <h3>Settings</h3>
-      <div style="display:flex;align-items:center;margin-bottom:20px;">
-        <div class="dp-container" onclick="document.getElementById('settingsDpUpload').click()">
-          <img id="settingsDp" class="dp" src="https://ui-avatars.com/api/?name=User" />
-          <div class="dp-overlay"><span>📷</span></div>
+        <!-- Translate Modal -->
+        <div id="translateModal" class="hidden"
+          style="position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
+          <div
+            style="background:var(--glass-panel-bg); padding:20px; border-radius:16px; width:300px; border:var(--glass-border); backdrop-filter:blur(20px);">
+            <h3 style="margin-bottom:15px;">Select Language</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <button onclick="setTranslationLang(null)"
+                style="grid-column:span 2; padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Original</button>
+              <button onclick="setTranslationLang('es')"
+                style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Spanish
+                🇪🇸</button>
+              <button onclick="setTranslationLang('fr')"
+                style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">French
+                🇫🇷</button>
+              <button onclick="setTranslationLang('de')"
+                style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">German
+                🇩🇪</button>
+              <button onclick="setTranslationLang('hi')"
+                style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Hindi
+                🇮🇳</button>
+              <button onclick="setTranslationLang('zh-CN')"
+                style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Chinese
+                🇨🇳</button>
+              <button onclick="setTranslationLang('ja')"
+                style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Japanese
+                🇯🇵</button>
+              <button onclick="setTranslationLang('ru')"
+                style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Russian
+                🇷🇺</button>
+              <button onclick="setTranslationLang('ar')"
+                style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Arabic
+                🇸🇦</button>
+              <button onclick="setTranslationLang('ta')"
+                style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Tamil
+                🇮🇳</button>
+              <button onclick="setTranslationLang('it')"
+                style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); color:white;">Italian
+                🇮🇹</button>
+            </div>
+            <button onclick="closeTranslateModal()"
+              style="margin-top:15px; width:100%; padding:10px; background:transparent; border:1px solid #666; color:#ccc; border-radius:8px;">Cancel</button>
+          </div>
         </div>
         <div>
-          <h4 id="settingsUsernameDisplay" style="margin:0; font-size:1.2rem;">User</h4>
-          <span style="font-size:0.8rem; color:var(--text-muted);">Click image to change</span>
-          <input type="file" id="settingsDpUpload" hidden onchange="uploadSettingsDP(this)" />
+          <div id="statusViewName" style="color:white; font-weight:600;">User</div>
+          <div id="statusViewTime" style="color:rgba(255,255,255,0.7); font-size:0.8rem;">Just now</div>
         </div>
       </div>
-      <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Username</label>
-      <input type="text" id="settingsUsername" disabled style="margin-bottom:15px; opacity:0.7;" />
-      <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Email</label>
-      <input type="text" id="settingsEmail" disabled style="margin-bottom:15px; opacity:0.7;" />
+      <button onclick="closeStatusViewer()"
+        style="position:absolute; top:20px; right:20px; z-index:5002; background:none; border:none; color:white; font-size:2rem;">✕</button>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <label style="color:var(--text-muted);">Appearance</label>
-        <button id="themeToggleBtn" onclick="toggleTheme()" style="width:auto; padding:6px 12px; font-size:0.9rem;">☀️
-          Light Mode</button>
+      <div id="statusContentArea"></div>
+
+      <div class="status-like-container">
+        <div id="statusLikeBtn" class="status-like-btn"
+          onclick="toggleStatusLike(currentStatusGroup.statuses[currentViewerItemIdx].id)">🤍</div>
+        <div id="statusLikeCount" class="status-like-count"></div>
       </div>
 
-      <label style="display:block; margin-bottom:10px; color:var(--text-muted);">Chat Wallpaper</label>
-      <div class="theme-grid">
-        <div class="theme-option" onclick="selectTheme('default')" data-theme="default" title="Default (None)"
-          style="background:var(--bg-gradient); display:flex;align-items:center;justify-content:center;">🚫</div>
-        <div class="theme-option" onclick="selectTheme('bg1')" data-theme="bg1" title="Background 1"
-          style="background-image:url('static/bg1.png');"></div>
-        <div class="theme-option" onclick="selectTheme('bg2')" data-theme="bg2" title="Background 2"
-          style="background-image:url('static/bg2.png');"></div>
-        <div class="theme-option" onclick="selectTheme('bg3')" data-theme="bg3" title="Background 3"
-          style="background-image:url('static/bg3.png');"></div>
-        <div class="theme-option" onclick="selectTheme('bg4')" data-theme="bg4" title="Background 4"
-          style="background-image:url('static/bg4.png');"></div>
-        <div class="theme-option" onclick="selectTheme('bg5')" data-theme="bg5" title="Background 5"
-          style="background-image:url('static/bg5.png');"></div>
-        <div class="theme-option" onclick="selectTheme('bg6')" data-theme="bg6" title="Background 6"
-          style="background-image:url('static/bg6.png');"></div>
-      </div>
-
-      <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Description (About)</label>
-      <input type="text" id="settingsDescription" placeholder="Hey there! I am using Alter."
-        style="margin-bottom:20px;" />
-      <div style="display: flex; gap: 10px;">
-        <button onclick="updateProfileDescription()" style="flex:1;">Save</button>
-        <button onclick="hideSettings()" class="secondary-btn" style="flex:1;">Close</button>
+      <div id="statusDeleteBtnContainer" class="hidden" style="position:absolute; top:20px; right:60px; z-index:5003;">
+        <button onclick="deleteStatus(currentStatusGroup.statuses[currentViewerItemIdx].id)"
+          style="background:rgba(0,0,0,0.5); border:none; color:white; font-size:1.5rem; cursor:pointer; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">🗑️</button>
       </div>
     </div>
-  </div>
+
+    <!-- Modals -->
+    <div id="addFriendModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Add Friend</h3>
+        <div style="position:relative;">
+          <input type="text" id="friendUsername" placeholder="Enter username..." style="width:100%; margin-bottom: 5px;"
+            oninput="searchUsers(this.value)" autocomplete="off" />
+          <div id="searchResults"></div>
+        </div>
+        <div style="margin-top:20px; display: flex; gap: 10px;">
+          <button onclick="sendFriendRequest()" style="flex:1;">Send Request</button>
+          <button onclick="hideAddFriend()" class="secondary-btn" style="flex:1;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="createGroupModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Create Group</h3>
+        <input type="text" id="groupName" placeholder="Group name" style="width:100%; margin-bottom: 10px;" />
+        <label style="display:block; margin-bottom:5px; color:var(--text-muted); font-size:0.9rem;">Select
+          Friends:</label>
+        <div class="member-list" id="friendSelectionList"
+          style="max-height: 200px; margin-bottom: 20px; overflow-y: auto;"></div>
+        <div style="display: flex; gap: 10px;">
+          <button onclick="createGroup()" style="flex:1;">Create</button>
+          <button onclick="hideCreateGroup()" class="secondary-btn" style="flex:1;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="groupMembersModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Group Members</h3>
+        <div class="member-list" id="groupMembersList"></div>
+        <div style="margin-top:20px; display:flex; gap:10px;">
+          <button id="addMemberBtn" onclick="showAddMemberModal()" style="flex:1;" class="hidden">Add Member</button>
+          <button onclick="hideGroupMembers()" class="secondary-btn" style="flex:1;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="addMemberModal" class="hidden modal" style="z-index: 1100;"> <!-- Higher z-index -->
+      <div class="modal-content">
+        <h3>Add Member</h3>
+        <div class="member-list" id="addMemberFriendList" style="max-height: 200px; overflow-y: auto;"></div>
+        <div style="margin-top:20px;">
+          <button onclick="document.getElementById('addMemberModal').classList.add('hidden')" class="secondary-btn"
+            style="width:100%;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+
+
+    <div id="reactionDetailsModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Reactions</h3>
+        <div class="member-list" id="reactionDetailsList" style="max-height: 300px; overflow-y: auto;"></div>
+        <div style="margin-top:20px;">
+          <button onclick="document.getElementById('reactionDetailsModal').classList.add('hidden')"
+            class="secondary-btn" style="width:100%;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="seenDetailsModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Seen By</h3>
+        <div class="member-list" id="seenDetailsList" style="max-height: 300px; overflow-y: auto;"></div>
+        <div style="margin-top:20px;">
+          <button onclick="document.getElementById('seenDetailsModal').classList.add('hidden')" class="secondary-btn"
+            style="width:100%;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="shareItemModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Share With</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:10px;">Select a friend to send a copy.</p>
+        <div class="member-list" id="shareFriendList" style="max-height: 300px; overflow-y: auto;"></div>
+        <div style="margin-top:20px;">
+          <button onclick="document.getElementById('shareItemModal').classList.add('hidden')" class="secondary-btn"
+            style="width:100%;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Summary Modal -->
+    <div id="summaryModal" class="hidden modal" style="z-index: 5005;">
+      <div class="modal-content">
+        <h3>✨ Chat Summary</h3>
+        <div id="summaryContent"
+          style="background:rgba(0,0,0,0.2); padding:15px; border-radius:10px; margin-top:10px; max-height:300px; overflow-y:auto; font-size:0.9rem; white-space:pre-wrap; line-height:1.5;">
+          Loading...</div>
+        <div style="margin-top:20px;">
+          <button onclick="document.getElementById('summaryModal').classList.add('hidden')" class="secondary-btn"
+            style="width:100%;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Search Modal -->
+    <div id="aiSearchModal" class="hidden modal" style="z-index: 5005;">
+      <div class="modal-content">
+        <h3>🔍 AI Search</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem;">Ask a question about this conversation.</p>
+        <input type="text" id="aiSearchQuery" placeholder="e.g. What time did we discuss meeting?"
+          style="width:100%; margin-top:10px; margin-bottom:10px;">
+        <button onclick="performAISearch()">Ask AI</button>
+
+        <div id="aiSearchResult" class="hidden"
+          style="background:rgba(0,0,0,0.2); padding:15px; border-radius:10px; margin-top:15px; max-height:200px; overflow-y:auto; font-size:0.9rem; white-space:pre-wrap; line-height:1.5;">
+        </div>
+
+        <div style="margin-top:20px;">
+          <button onclick="document.getElementById('aiSearchModal').classList.add('hidden')" class="secondary-btn"
+            style="width:100%;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      async function fetchChatSummary() {
+        if (!currentChatId) return alert("Select a chat first.");
+        document.getElementById('summaryModal').classList.remove('hidden');
+        document.getElementById('summaryContent').textContent = "Generating summary with AI...";
+
+        try {
+          const res = await api(`/api/chat/${currentChatId}/summarize`, {
+            method: 'POST',
+            body: JSON.stringify({ type: currentChatType })
+          });
+          document.getElementById('summaryContent').textContent = res.result || "No summary available.";
+        } catch (e) {
+          document.getElementById('summaryContent').textContent = "Error: " + e.message;
+        }
+      }
+
+      function openAISearchModal() {
+        if (!currentChatId) return alert("Select a chat first.");
+        document.getElementById('aiSearchModal').classList.remove('hidden');
+        document.getElementById('aiSearchQuery').value = '';
+        document.getElementById('aiSearchResult').classList.add('hidden');
+        document.getElementById('aiSearchResult').textContent = '';
+      }
+
+      async function performAISearch() {
+        const query = document.getElementById('aiSearchQuery').value.trim();
+        if (!query) return;
+
+        const resultDiv = document.getElementById('aiSearchResult');
+        resultDiv.classList.remove('hidden');
+        resultDiv.textContent = "Searching...";
+
+        try {
+          const res = await api(`/api/chat/${currentChatId}/ai_search`, {
+            method: 'POST',
+            body: JSON.stringify({ type: currentChatType, query: query })
+          });
+          resultDiv.textContent = res.result || "No answer found.";
+        } catch (e) {
+          resultDiv.textContent = "Error: " + e.message;
+        }
+      }
+    </script>
+
+
+    <!-- DELTA AI Modal -->
+    <div id="deltaModal" class="hidden modal" style="z-index: 5000;">
+      <div class="modal-content">
+        <h3>✨ DELTA AI</h3>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+          <button onclick="triggerDelta('summarize')" class="secondary-btn">📝 Summarize</button>
+          <button onclick="triggerDelta('action_items')" class="secondary-btn">✅ Action Items</button>
+          <button onclick="triggerDelta('polish')" class="secondary-btn">🎩 Polish / Professional</button>
+          <button onclick="triggerDelta('expand')" class="secondary-btn">🧠 Brainstorm / Expand</button>
+          <button onclick="triggerDelta('explain_code')" class="secondary-btn">💻 Explain Code</button>
+        </div>
+
+        <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-size:0.9rem;">Ask a Question about this note:</label>
+          <div style="display:flex; gap:5px;">
+            <input type="text" id="deltaQuery" placeholder="e.g. What is the deadline?" style="flex:1;">
+            <button onclick="triggerDelta('qa')">Ask</button>
+          </div>
+        </div>
+
+        <div id="deltaResultArea" class="hidden"
+          style="background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; margin-bottom:15px; max-height:200px; overflow-y:auto; font-size:0.9rem; white-space:pre-wrap;">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+          <button onclick="document.getElementById('deltaModal').classList.add('hidden')"
+            class="secondary-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ... existing modals ... -->
+    <div id="settingsModal" class="hidden modal">
+      <div class="modal-content">
+        <h3>Settings</h3>
+        <div style="display:flex;align-items:center;margin-bottom:20px;">
+          <div class="dp-container" onclick="document.getElementById('settingsDpUpload').click()">
+            <img id="settingsDp" class="dp" src="https://ui-avatars.com/api/?name=User" />
+            <div class="dp-overlay"><span>📷</span></div>
+          </div>
+          <div>
+            <h4 id="settingsUsernameDisplay" style="margin:0; font-size:1.2rem;">User</h4>
+            <span style="font-size:0.8rem; color:var(--text-muted);">Click image to change</span>
+            <input type="file" id="settingsDpUpload" hidden onchange="uploadSettingsDP(this)" />
+          </div>
+        </div>
+        <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Username</label>
+        <input type="text" id="settingsUsername" disabled style="margin-bottom:15px; opacity:0.7;" />
+        <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Email</label>
+        <input type="text" id="settingsEmail" disabled style="margin-bottom:15px; opacity:0.7;" />
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <label style="color:var(--text-muted);">Appearance</label>
+          <button id="themeToggleBtn" onclick="toggleTheme()" style="width:auto; padding:6px 12px; font-size:0.9rem;">☀️
+            Light Mode</button>
+        </div>
+
+        <label style="display:block; margin-bottom:10px; color:var(--text-muted);">Chat Wallpaper</label>
+        <div class="theme-grid">
+          <div class="theme-option" onclick="selectTheme('default')" data-theme="default" title="Default (None)"
+            style="background:var(--bg-gradient); display:flex;align-items:center;justify-content:center;">🚫</div>
+          <div class="theme-option" onclick="selectTheme('bg1')" data-theme="bg1" title="Background 1"
+            style="background-image:url('static/bg1.png');"></div>
+          <div class="theme-option" onclick="selectTheme('bg2')" data-theme="bg2" title="Background 2"
+            style="background-image:url('static/bg2.png');"></div>
+          <div class="theme-option" onclick="selectTheme('bg3')" data-theme="bg3" title="Background 3"
+            style="background-image:url('static/bg3.png');"></div>
+          <div class="theme-option" onclick="selectTheme('bg4')" data-theme="bg4" title="Background 4"
+            style="background-image:url('static/bg4.png');"></div>
+          <div class="theme-option" onclick="selectTheme('bg5')" data-theme="bg5" title="Background 5"
+            style="background-image:url('static/bg5.png');"></div>
+          <div class="theme-option" onclick="selectTheme('bg6')" data-theme="bg6" title="Background 6"
+            style="background-image:url('static/bg6.png');"></div>
+        </div>
+
+        <label style="display:block; margin-bottom:5px; color:var(--text-muted);">Description (About)</label>
+        <input type="text" id="settingsDescription" placeholder="Hey there! I am using Alter."
+          style="margin-bottom:20px;" />
+        <div style="display: flex; gap: 10px;">
+          <button onclick="updateProfileDescription()" style="flex:1;">Save</button>
+          <button onclick="hideSettings()" class="secondary-btn" style="flex:1;">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 
 
@@ -3695,7 +3728,7 @@
             <div style="width:100%; background:rgba(0,0,0,0.4); border:1px solid gold; border-radius:12px; padding:15px; text-align:center; box-shadow:0 0 15px rgba(255,215,0,0.2);">
                  <div style="font-size:2rem; margin-bottom:5px;">⚖️</div>
                  <div style="color:gold; font-weight:bold; margin-bottom:10px; font-family:serif;">THE VERDICT</div>
-                 <div class="msg-content" style="font-style:italic; color:#fff; font-size:1.1rem; line-height:1.5;">${msg.content}</div>
+                 <div class="msg-content" style="font-style:italic; color:#fff; font-size:1.1rem; line-height:1.5;">${msg.content.replace(/`/g, "")}</div>
                  <div style="margin-top:10px; font-size:0.7rem; color:gold; opacity:0.7;">DIVINE INTERVENTION</div>
             </div>
            `;
