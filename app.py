@@ -1621,6 +1621,10 @@ def handle_oracle(data):
         
     except Exception as e:
         print(f"Oracle Error: {e}")
+        emit('error', {'msg': f'Oracle failed: {str(e)}'})
+
+
+
 
 
 # === Run ===
