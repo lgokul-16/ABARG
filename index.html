@@ -3109,7 +3109,9 @@
       currentViewerGroupIdx = -1; // Special index
       currentViewerItemIdx = 0;
 
-      document.getElementById('statusViewer').style.display = 'flex';
+      const viewer = document.getElementById('statusViewer');
+      viewer.classList.remove('hidden'); // Remove hidden class
+      viewer.style.display = 'flex'; // Ensure it's displayed as flex
       setupViewerListeners();
       showStatusItem();
     }
@@ -3255,6 +3257,7 @@
       if (!currentStatusGroup || !currentStatusGroup.statuses.length) return;
 
       const viewer = document.getElementById('statusViewer');
+      viewer.classList.remove('hidden'); // Ensure it's visible
       viewer.style.display = 'flex';
 
       // Setup interaction listeners
@@ -3269,7 +3272,8 @@
     }
 
     function closeStatusViewer() {
-      document.getElementById('statusViewer').style.display = 'none';
+      document.getElementById('statusViewer').classList.add('hidden'); // Hide using class
+      document.getElementById('statusViewer').style.display = 'none'; // Ensure display is none
       clearTimeout(statusTimer);
       const vid = document.querySelector('#statusContentArea video');
       if (vid) vid.pause();
